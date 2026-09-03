@@ -788,6 +788,8 @@
             border: none; background: none; width: 100%; text-align: left; font-family: inherit;
         }
         .app-sidebar-item:hover { background: var(--hover); color: var(--text-primary); }
+        .icon { width: 18px; height: 18px; flex: 0 0 auto; }
+        .icon-lg { width: 28px; height: 28px; }
         .app-sidebar-icon { font-size: 18px; min-width: 24px; text-align: center; }
         .app-sidebar-divider { height: 1px; background: var(--border); margin: 6px 12px; }
         .container { margin-left: 56px; transition: margin-left 0.25s ease; }
@@ -829,25 +831,59 @@
     </style>
 </head>
 <body>
+    <svg style="display:none" aria-hidden="true">
+        <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v12" />
+            <path d="m7 8 5-5 5 5" />
+            <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" />
+        </symbol>
+        <symbol id="i-packets" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="3" width="16" height="5" rx="1" />
+            <rect x="4" y="9.5" width="16" height="5" rx="1" />
+            <rect x="4" y="16" width="16" height="5" rx="1" />
+        </symbol>
+        <symbol id="i-log" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 6h11M8 12h11M8 18h11" />
+            <circle cx="4" cy="6" r=".75" />
+            <circle cx="4" cy="12" r=".75" />
+            <circle cx="4" cy="18" r=".75" />
+        </symbol>
+        <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10Z" />
+            <path d="M9 21v-7h6v7" />
+        </symbol>
+        <symbol id="i-reference" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H12v17H6.5A2.5 2.5 0 0 0 4 22V5.5Z" />
+            <path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H12v17h5.5A2.5 2.5 0 0 1 20 22V5.5Z" />
+        </symbol>
+        <symbol id="i-pattern" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 17V7m5 10V4m5 13V9m5 8V6" />
+        </symbol>
+        <symbol id="i-combined" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7" cy="12" r="3" />
+            <circle cx="17" cy="12" r="3" />
+            <path d="M10 12h4" />
+        </symbol>
+    </svg>
     <button class="app-sidebar-hamburger" onclick="toggleAppSidebar()" aria-label="Open navigation"></button>
     <div class="app-sidebar-overlay" id="appSidebarOverlay" onclick="toggleAppSidebar()"></div>
 
     <nav id="appSidebar" class="app-sidebar">
         <div class="app-sidebar-brand">
-
+            <svg class="icon app-sidebar-icon" aria-hidden="true"><use href="#i-upload" /></svg>
             <span class="app-sidebar-label"><span class="wire">Wire</span><span class="trace">Trace</span></span>
         </div>
         <div class="app-sidebar-section-title">General</div>
         <button class="app-sidebar-item" onclick="sidebarAction('home')">
-
+            <svg class="icon app-sidebar-icon" aria-hidden="true"><use href="#i-home" /></svg>
             <span class="app-sidebar-label">Home / Main Tool</span>
         </button>
         <button class="app-sidebar-item" onclick="sidebarAction('guide')">
-
+            <svg class="icon app-sidebar-icon" aria-hidden="true"><use href="#i-reference" /></svg>
             <span class="app-sidebar-label">Reference Guide</span>
         </button>
         <button class="app-sidebar-item" onclick="sidebarAction('patterns')">
-
+            <svg class="icon app-sidebar-icon" aria-hidden="true"><use href="#i-pattern" /></svg>
             <span class="app-sidebar-label">Traffic Patterns</span>
         </button>
         <div class="app-sidebar-divider"></div>
@@ -867,7 +903,7 @@
             <div class="drop-bar" id="dropBar">
                 <div class="drop-bar-header" onclick="toggleDropBar()">
                     <div class="drop-bar-header-left">
-
+                        <svg class="icon" aria-hidden="true"><use href="#i-upload" /></svg>
                         <span>File Upload</span>
                         <div class="drop-bar-badges" id="dropBarBadges"></div>
                     </div>
@@ -875,14 +911,14 @@
                 </div>
                 <div class="drop-bar-body" id="dropBarBody">
                     <div class="drop-zone-mini pcap-zone" id="pcapDropZone">
-
+                        <svg class="icon icon-lg dz-icon" aria-hidden="true"><use href="#i-packets" /></svg>
                         <div class="dz-title">PCAP Packet Capture</div>
                         <div class="dz-hint">Drop .pcap or .pcapng</div>
                         <div class="dz-file-info" id="pcapFileInfo" style="display:none"></div>
                         <input type="file" id="pcapFileInput" accept=".pcap,.pcapng" style="display:none">
                     </div>
                     <div class="drop-zone-mini event-zone" id="eventDropZone">
-
+                        <svg class="icon icon-lg dz-icon" aria-hidden="true"><use href="#i-log" /></svg>
                         <div class="dz-title">Event Log</div>
                         <div class="dz-hint">Drop .log, .csv, or .txt</div>
                         <div class="dz-file-info" id="eventFileInfo" style="display:none"></div>
@@ -900,13 +936,16 @@
             <!-- Viewer Tabs -->
             <div class="viewer-tabs" id="viewerTabs">
                 <button class="viewer-tab-btn pcap-tab" id="tabPcap" onclick="switchViewerTab('pcap')">
-                     PCAP <span class="tab-count" id="tabPcapCount"></span>
+                    <svg class="icon" aria-hidden="true"><use href="#i-packets" /></svg>
+                    PCAP <span class="tab-count" id="tabPcapCount"></span>
                 </button>
                 <button class="viewer-tab-btn event-tab" id="tabEvent" onclick="switchViewerTab('event')">
-                     Event Log <span class="tab-count" id="tabEventCount"></span>
+                    <svg class="icon" aria-hidden="true"><use href="#i-log" /></svg>
+                    Event Log <span class="tab-count" id="tabEventCount"></span>
                 </button>
                 <button class="viewer-tab-btn combined-tab" id="tabCombined" onclick="switchViewerTab('combined')" style="display:none">
-                     Combined Findings
+                    <svg class="icon" aria-hidden="true"><use href="#i-combined" /></svg>
+                    Combined Findings
                 </button>
             </div>
 
