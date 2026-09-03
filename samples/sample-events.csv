@@ -1,0 +1,13 @@
+Date,Time,Details,Category,Severity
+2026-01-15,10:00:01,AP-01: wlan0: STA 02:11:22:33:44:55 IEEE 802.11: authenticated,Wi-Fi,INFO
+2026-01-15,10:00:02,AP-01: wlan0: STA 02:11:22:33:44:55 IEEE 802.11: associated,Wi-Fi,INFO
+2026-01-15,10:00:08,AP-01: wlan0: disassociated due to inactivity,Wi-Fi,WARNING
+2026-01-15,10:00:09,AP-01: wlan0: STA 02:11:22:33:44:55 IEEE 802.11: authenticated,Wi-Fi,INFO
+2026-01-15,10:01:14,AP-01: wlan0: STA 02:11:22:33:44:55 IEEE 802.11: associated (roaming),Roaming,INFO
+2026-01-15,10:02:00,kernel: eth0: Link is Down,Ethernet,WARNING
+2026-01-15,10:02:02,kernel: eth0: Link is Up - 1000Mbps full-duplex,Ethernet,INFO
+2026-01-15,10:03:10,pppd[402]: LCP terminated by peer,PPPoE,ERROR
+2026-01-15,10:03:12,pppd[402]: Connection established,PPPoE,INFO
+2026-01-15,10:04:20,dnsmasq-dhcp: DHCPDISCOVER(br0) 02:11:22:33:44:55,DHCP,INFO
+2026-01-15,10:04:21,dnsmasq-dhcp: DHCPOFFER(br0) 192.168.1.20 02:11:22:33:44:55,DHCP,INFO
+2026-01-15,10:05:00,kernel: arp: 192.168.1.1 is-at 02:aa:bb:cc:dd:ee,ARP,CRITICAL

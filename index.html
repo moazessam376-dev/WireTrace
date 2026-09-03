@@ -1,0 +1,1958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WireTrace - Network Analysis Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e14;
+            --bg-secondary: #14191f;
+            --bg-card: #1a1f2e;
+            --bg-card-dark: #0d1117;
+            --text-primary: #e6edf3;
+            --text-secondary: #7d8590;
+            --text-muted: #484f58;
+            --crimson: #dc2857;
+            --cyan: #00d4ff;
+            --green: #3fb950;
+            --border: #30363d;
+            --hover: rgba(220, 40, 87, 0.1);
+            --code-bg: #161b22;
+            
+            --proto-pppoe: #ec4899;
+            --proto-ipv6: #8b5cf6;
+            --proto-arp: #10b981;
+            --proto-tcp: #06b6d4;
+            --proto-udp: #84cc16;
+            --proto-dns: #a855f7;
+            --proto-dhcp: #f59e0b;
+            --proto-http: #f97316;
+            --proto-https: #8b5cf6;
+            --proto-icmp: #ef4444;
+            --proto-ethernet: #94a3b8;
+            --proto-sll: #64748b;
+            --proto-vlan: #c084fc;
+            --proto-ipv4: #38bdf8;
+            
+            --status-error: #991b1b;
+            --status-warning: #92400e;
+            --status-ok: #065f46;
+        }
+
+        body {
+            font-family: 'Space Grotesk', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1920px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            position: relative;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 40px 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 12px;
+            padding: 2px;
+            background: linear-gradient(90deg, var(--crimson), var(--cyan), var(--crimson));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: borderFlow 4s linear infinite;
+            background-size: 200% 100%;
+        }
+        @keyframes borderFlow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(0, 212, 255, 0.03) 50%, transparent 100%);
+            animation: scan 8s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(200%); }
+        }
+        .header-content { position: relative; z-index: 1; }
+        h1 { font-size: 48px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; }
+        .wire { color: var(--crimson); }
+        .trace { color: var(--cyan); }
+        .subtitle { color: var(--text-secondary); font-size: 14px; margin-bottom: 6px; }
+        .attribution { color: #475569; font-size: 12px; margin-bottom: 16px; }
+
+        /* ===== PERSISTENT DROP ZONE BAR ===== */
+        .drop-bar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .drop-bar.collapsed .drop-bar-body {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            opacity: 0;
+        }
+        .drop-bar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 18px;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+        .drop-bar-header:hover { background: rgba(255,255,255,0.02); }
+        .drop-bar-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .drop-bar-header-left .icon { font-size: 16px; }
+        .drop-bar-badges {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .file-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .file-badge.pcap-badge {
+            background: rgba(220, 40, 87, 0.15);
+            color: var(--crimson);
+            border: 1px solid rgba(220, 40, 87, 0.3);
+        }
+        .file-badge.event-badge {
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--green);
+            border: 1px solid rgba(63, 185, 80, 0.3);
+        }
+        .file-badge .badge-x {
+            cursor: pointer;
+            opacity: 0.6;
+            margin-left: 2px;
+            font-size: 13px;
+        }
+        .file-badge .badge-x:hover { opacity: 1; }
+        .drop-bar-chevron {
+            font-size: 18px;
+            color: var(--text-secondary);
+            transition: transform 0.3s;
+        }
+        .drop-bar.collapsed .drop-bar-chevron { transform: rotate(-90deg); }
+        .drop-bar-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            padding: 14px 18px;
+            max-height: 200px;
+            opacity: 1;
+            transition: max-height 0.35s ease, padding 0.35s ease, opacity 0.25s ease;
+            overflow: hidden;
+        }
+        .drop-zone-mini {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 18px 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s;
+            background: var(--bg-primary);
+            position: relative;
+        }
+        .drop-zone-mini:hover, .drop-zone-mini.drag-over {
+            border-color: var(--crimson);
+            background: var(--hover);
+        }
+        .drop-zone-mini.event-zone:hover, .drop-zone-mini.event-zone.drag-over {
+            border-color: var(--green);
+            background: rgba(63, 185, 80, 0.08);
+        }
+        .drop-zone-mini.has-file {
+            border-style: solid;
+            border-color: var(--border);
+            background: rgba(255,255,255,0.015);
+        }
+        .drop-zone-mini.has-file.pcap-zone { border-color: rgba(220, 40, 87, 0.25); }
+        .drop-zone-mini.has-file.event-zone { border-color: rgba(63, 185, 80, 0.25); }
+        .dz-icon { font-size: 22px; margin-bottom: 4px; }
+        .dz-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+        .dz-hint { font-size: 11px; color: var(--text-secondary); }
+        .dz-file-info {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--cyan);
+            margin-top: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Progress bar */
+        .progress-container { margin-top: 10px; display: none; }
+        .progress-container.show { display: block; }
+        .progress-bar { width: 100%; height: 3px; background: var(--border); border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--crimson), var(--cyan)); width: 0%; transition: width 0.3s; }
+        .progress-text { text-align: center; margin-top: 8px; font-size: 12px; color: var(--text-secondary); }
+
+        /* ===== VIEWER TABS ===== */
+        .viewer-tabs {
+            display: none;
+            margin-bottom: 0;
+        }
+        .viewer-tabs.show { display: flex; }
+        .viewer-tab-btn {
+            flex: 1;
+            padding: 12px 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Space Grotesk', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .viewer-tab-btn:first-child { border-radius: 8px 0 0 0; }
+        .viewer-tab-btn:last-child { border-radius: 0 8px 0 0; }
+        .viewer-tab-btn:not(:last-child) { border-right: none; }
+        .viewer-tab-btn.active {
+            color: var(--text-primary);
+            background: var(--bg-card);
+            border-bottom-color: transparent;
+        }
+        .viewer-tab-btn.pcap-tab.active {
+            border-top: 2px solid var(--crimson);
+            color: var(--crimson);
+        }
+        .viewer-tab-btn.event-tab.active {
+            border-top: 2px solid var(--green);
+            color: var(--green);
+        }
+        .viewer-tab-btn.combined-tab.active {
+            border-top: 2px solid var(--cyan);
+            color: var(--cyan);
+        }
+        .viewer-tab-btn .tab-count {
+            font-size: 11px;
+            padding: 1px 6px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.06);
+        }
+
+        /* Viewer container */
+        .viewer {
+            display: none;
+            background: var(--bg-secondary);
+            border-radius: 0 0 12px 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-top: none;
+        }
+        .viewer.show { display: block; }
+        .viewer.no-tabs { border-radius: 12px; border-top: 1px solid var(--border); }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px 20px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+        }
+        .toolbar input[type="text"] {
+            flex: 1;
+            min-width: 250px;
+            padding: 10px 15px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+        .toolbar input:focus { outline: none; border-color: var(--crimson); }
+        .toolbar select {
+            padding: 10px 15px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            cursor: pointer;
+            min-width: 150px;
+        }
+        .toolbar button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .btn-apply { background: var(--crimson); color: white; }
+        .btn-apply:hover { background: #be1e3e; }
+        .btn-clear { background: var(--border); color: var(--text-secondary); }
+        .btn-clear:hover { background: #3d4758; }
+        .btn-jump-findings {
+            background: rgba(0, 212, 255, 0.15);
+            color: var(--cyan);
+            border: 1px solid rgba(0, 212, 255, 0.35);
+        }
+        .btn-jump-findings:hover { background: rgba(0, 212, 255, 0.25); }
+        .time-controls { display: flex; gap: 5px; align-items: center; margin-left: auto; }
+        .time-label { color: var(--text-secondary); font-size: 12px; margin-right: 5px; }
+        .time-btn {
+            padding: 8px 14px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .time-btn.active { background: var(--crimson); color: white; border-color: var(--crimson); }
+        .packet-count { color: var(--text-primary); font-size: 13px; font-weight: 600; white-space: nowrap; }
+
+        /* Split layout */
+        .split-layout {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            height: calc(100vh - 340px);
+            min-height: 500px;
+        }
+
+        /* Packet table */
+        .packet-list {
+            overflow: auto;
+            background: var(--bg-primary);
+            border-right: 1px solid var(--border);
+        }
+        table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+        .packet-list table { table-layout: auto; }
+        thead { position: sticky; top: 0; background: var(--bg-card); z-index: 10; }
+        th {
+            padding: 5px 8px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid var(--crimson);
+            white-space: nowrap;
+        }
+        tbody tr {
+            border-bottom: 1px solid rgba(45, 55, 72, 0.3);
+            cursor: pointer;
+            transition: background 0.15s;
+            line-height: 1.2;
+        }
+        tbody tr:hover { background: var(--bg-card); }
+        tbody tr.selected { background: rgba(220, 40, 87, 0.15); border-left: 3px solid var(--crimson); }
+        tbody tr.packet-error { background: rgba(153, 27, 27, 0.15); }
+        tbody tr.packet-warning { background: rgba(146, 64, 14, 0.1); }
+        td { padding: 3px 8px; color: var(--text-primary); white-space: nowrap; }
+        td:last-child { overflow: hidden; text-overflow: ellipsis; max-width: 250px; }
+        .protocol { font-weight: 600; text-transform: uppercase; }
+        .protocol-pppoe { color: var(--proto-pppoe); }
+        .protocol-ipv6 { color: var(--proto-ipv6); }
+        .protocol-arp { color: var(--proto-arp); }
+        .protocol-tcp { color: var(--proto-tcp); }
+        .protocol-udp { color: var(--proto-udp); }
+        .protocol-dns { color: var(--proto-dns); }
+        .protocol-dhcp { color: var(--proto-dhcp); }
+        .protocol-http { color: var(--proto-http); }
+        .protocol-https { color: var(--proto-https); }
+        .protocol-icmp { color: var(--proto-icmp); }
+        .protocol-ethernet { color: var(--proto-ethernet); }
+        .protocol-sll { color: var(--proto-sll); }
+        .protocol-vlan { color: var(--proto-vlan); }
+        .protocol-ipv4 { color: var(--proto-ipv4); }
+        .text-muted { color: var(--text-secondary); }
+        .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Sidebar */
+        .sidebar { background: var(--bg-card); overflow: auto; }
+        .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg-secondary); }
+        .sidebar-tab {
+            flex: 1;
+            min-height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .sidebar-tab:hover { background: var(--bg-card); color: var(--text-primary); }
+        .sidebar-tab.active { color: var(--crimson); border-bottom-color: var(--crimson); background: var(--bg-card); }
+        .sidebar-content { display: none; padding: 20px; }
+        .sidebar-content.active { display: block; }
+
+        /* Detail sections */
+        .detail-section {
+            background: rgba(45, 55, 72, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .detail-section h3 { font-size: 14px; color: var(--crimson); margin-bottom: 12px; font-weight: 600; }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 12px;
+            border-bottom: 1px solid rgba(45, 55, 72, 0.5);
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { color: var(--text-secondary); }
+        .detail-value { color: var(--text-primary); font-weight: 600; text-align: right; }
+        .layer-section { margin-top: 15px; border-left: 2px solid var(--cyan); padding-left: 12px; }
+        .layer-title { color: var(--cyan); font-weight: 600; font-size: 12px; text-transform: uppercase; margin-bottom: 8px; }
+        .layer-field { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+        .layer-field span { color: var(--text-primary); }
+
+        /* Stats grid */
+        .stats-grid { display: grid; gap: 10px; }
+        .stat-card { background: rgba(45, 55, 72, 0.3); border: 1px solid var(--border); border-radius: 6px; padding: 12px; }
+        .stat-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+        .stat-value { font-size: 18px; font-weight: 700; color: var(--crimson); }
+        .protocol-list { margin-top: 10px; }
+        .protocol-item { display: flex; justify-content: space-between; padding: 6px 0; font-size: 12px; }
+
+        /* Findings section */
+        .findings-section {
+            margin: 15px 20px 20px;
+            border: 1px solid rgba(0, 212, 255, 0.35);
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(220, 40, 87, 0.08) 45%, var(--bg-card));
+            padding: 14px;
+            box-shadow: 0 0 0 1px rgba(220, 40, 87, 0.12), 0 8px 20px rgba(0, 0, 0, 0.35);
+        }
+        .findings-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+        .findings-list { display: flex; flex-direction: column; gap: 10px; }
+        .finding-card {
+            border: 1px solid rgba(0, 212, 255, 0.25);
+            border-radius: 8px;
+            background: linear-gradient(120deg, rgba(10, 14, 20, 0.98), rgba(20, 25, 31, 0.96));
+            padding: 10px;
+            font-size: 12px;
+        }
+        .finding-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .finding-badge {
+            text-transform: uppercase;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+        .finding-badge.high { color: #fecaca; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(248, 113, 113, 0.5); }
+        .finding-badge.medium { color: #fde68a; background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(251, 191, 36, 0.5); }
+        .finding-badge.low { color: #bfdbfe; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(96, 165, 250, 0.5); }
+        .finding-meta { color: var(--text-secondary); margin-bottom: 6px; line-height: 1.5; }
+        .finding-impact { color: var(--text-primary); line-height: 1.5; margin-bottom: 6px; }
+        .finding-evidence { color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px; }
+        .finding-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .finding-btn {
+            padding: 6px 10px;
+            border-radius: 5px;
+            border: 1px solid var(--border);
+            font-size: 11px;
+            cursor: pointer;
+            background: rgba(10, 14, 20, 0.9);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+        .finding-btn:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(0, 212, 255, 0.08); }
+        .finding-example { color: var(--text-muted); margin-left: 10px; }
+
+        /* Combined findings special styles */
+        .finding-source-tag {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 6px;
+        }
+        .finding-source-tag.pcap-source { background: rgba(220,40,87,0.2); color: var(--crimson); }
+        .finding-source-tag.event-source { background: rgba(63,185,80,0.2); color: var(--green); }
+        .finding-source-tag.cross-ref { background: rgba(0,212,255,0.2); color: var(--cyan); }
+        .cross-ref-card {
+            border-color: rgba(0, 212, 255, 0.4);
+            background: linear-gradient(120deg, rgba(0, 212, 255, 0.04), rgba(10, 14, 20, 0.98));
+        }
+        .cross-ref-header {
+            background: rgba(0, 212, 255, 0.06);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+        .cross-ref-header strong { color: var(--cyan); }
+
+        /* Endpoint tables */
+        .endpoint-table { width: 100%; font-size: 12px; margin-top: 10px; }
+        .endpoint-table th { font-size: 10px; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+        .endpoint-table td { padding: 8px 6px; cursor: pointer; }
+        .endpoint-table tr:hover { background: var(--bg-primary); }
+        .endpoint-address { color: var(--cyan); }
+
+        /* Security warnings */
+        .security-warning { background: rgba(239, 68, 68, 0.1); border: 1px solid #dc2626; border-radius: 8px; padding: 15px; margin-bottom: 12px; }
+        .security-warning-critical { background: rgba(220, 38, 38, 0.15); border: 2px solid #ff0000; border-radius: 8px; padding: 15px; margin-bottom: 12px; }
+        .warning-title { color: #dc2626; font-weight: 600; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .warning-title-critical { color: #ff0000; font-weight: 600; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .warning-details { font-size: 11px; color: var(--text-secondary); line-height: 1.6; }
+        .security-ok { color: var(--proto-arp); font-size: 12px; }
+
+        /* Hex dump */
+        .hex-dump {
+            background: var(--code-bg);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin-top: 8px;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            line-height: 1.4;
+            white-space: pre;
+        }
+        .hex-expand-btn {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--cyan);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .hex-expand-btn:hover { border-color: var(--crimson); }
+
+        /* Footer */
+        .viewer-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+        }
+        .btn-reset {
+            padding: 10px 20px;
+            background: var(--border);
+            color: var(--text-secondary);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-reset:hover { background: #3d4758; }
+        .filename { color: var(--text-secondary); font-size: 12px; }
+
+        /* Modal */
+        .modal {
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
+            width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8);
+            align-items: center; justify-content: center;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: var(--bg-secondary); border-radius: 12px; width: 90%; max-width: 1200px;
+            max-height: 90vh; display: flex; flex-direction: column; border: 1px solid var(--crimson); overflow: hidden;
+        }
+        .modal-header {
+            padding: 20px 25px; background: var(--bg-card); border-bottom: 2px solid var(--crimson);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-header h2 { color: var(--text-primary); font-size: 18px; }
+        .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 28px; cursor: pointer; }
+        .modal-close:hover { color: var(--crimson); }
+        .modal-body { padding: 25px; overflow-y: auto; flex: 1; }
+        .modal-footer {
+            padding: 15px 25px; background: var(--bg-card); border-top: 1px solid var(--border);
+            display: flex; justify-content: flex-end; gap: 10px;
+        }
+        .stream-header { background: var(--bg-card); padding: 15px; border-radius: 8px; margin-bottom: 15px; font-size: 12px; }
+        .stream-header div { padding: 4px 0; color: var(--text-secondary); }
+        .stream-header span { color: var(--cyan); font-weight: 600; }
+        .stream-content {
+            background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px;
+            font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-primary);
+            white-space: pre; max-height: 500px; overflow: auto;
+        }
+        .action-btn { padding: 10px 20px; background: var(--crimson); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .action-btn-secondary { background: var(--border); color: var(--text-secondary); }
+
+        /* Reference Guide */
+        .ref-guide { display: none; }
+        .ref-guide.show { display: block; }
+        .findings-page { display: none; }
+        .findings-page.show { display: block; }
+        .back-link { display: inline-flex; align-items: center; gap: 8px; color: var(--cyan); text-decoration: none; font-size: 14px; margin-bottom: 20px; transition: opacity 0.3s; }
+        .back-link:hover { opacity: 0.8; }
+
+        /* TOC */
+        .toc { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 30px; margin-bottom: 40px; }
+        .toc h2 { font-size: 24px; margin-bottom: 20px; color: var(--text-primary); }
+        .toc-list { list-style: none; display: grid; gap: 15px; }
+        .toc-item { background: var(--bg-card-dark); border: 1px solid var(--border); border-radius: 8px; transition: all 0.3s; }
+        .toc-item:hover { border-color: var(--cyan); background: rgba(0, 212, 255, 0.05); }
+        .toc-link { display: flex; align-items: center; gap: 12px; padding: 16px 20px; color: var(--text-primary); text-decoration: none; font-weight: 500; }
+        .toc-icon { font-size: 24px; }
+        .toc-title { font-size: 18px; }
+        .section { margin-bottom: 60px; }
+        .section-header { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 2px solid var(--border); }
+        .section-icon { font-size: 36px; }
+        .section-title { font-size: 36px; font-weight: 700; color: var(--crimson); }
+        .subsection { margin-bottom: 40px; }
+        .subsection-title { font-size: 24px; color: var(--cyan); margin-bottom: 25px; font-weight: 600; }
+        .guide-grid { display: grid; gap: 25px; }
+        .guide-card { background: var(--code-bg); border: 1px solid var(--border); border-radius: 12px; padding: 25px; transition: all 0.3s; }
+        .guide-card:hover { border-color: var(--cyan); box-shadow: 0 0 25px rgba(0, 212, 255, 0.1); }
+        .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+        .card-header-icon { font-size: 24px; }
+        .card-header-title { font-size: 20px; font-weight: 600; color: var(--text-primary); }
+        .flow-sequence { background: var(--bg-card-dark); border-radius: 8px; padding: 16px; margin: 12px 0; font-family: 'JetBrains Mono', monospace; }
+        .flow-item { display: flex; align-items: center; gap: 12px; padding: 8px; border-bottom: 1px solid rgba(45, 55, 72, 0.5); }
+        .flow-item:last-child { border-bottom: none; }
+        .flow-arrow { color: var(--crimson); font-size: 16px; min-width: 30px; }
+        .flow-text { color: var(--text-primary); font-size: 14px; }
+        .flow-desc { color: var(--text-secondary); font-size: 13px; margin-left: 42px; margin-top: 4px; }
+        .tip-box { background: rgba(0, 212, 255, 0.05); border-left: 3px solid var(--cyan); padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+        .tip-icon { color: var(--cyan); margin-right: 8px; }
+        .tip-text { color: var(--text-primary); font-size: 14px; line-height: 1.6; }
+
+        /* Patterns */
+        .patterns-nav { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
+        .patterns-nav-btn { padding: 12px 24px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-secondary); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; font-family: 'Space Grotesk', sans-serif; }
+        .patterns-nav-btn:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(0, 212, 255, 0.05); }
+        .patterns-nav-btn.active { background: var(--cyan); color: var(--bg-primary); border-color: var(--cyan); box-shadow: 0 0 20px rgba(0, 212, 255, 0.3); }
+        .patterns-section { display: none; }
+        .patterns-section.active { display: block; }
+        .section-intro { color: var(--text-secondary); font-size: 15px; margin-bottom: 30px; line-height: 1.6; }
+        .pattern-detail-card { background: var(--bg-card-dark); border: 1px solid var(--border); border-radius: 12px; padding: 30px; margin-bottom: 30px; scroll-margin-top: 100px; }
+        .pattern-detail-card.detected { border-left: 4px solid var(--green); background: linear-gradient(90deg, rgba(63, 185, 80, 0.08) 0%, var(--bg-card-dark) 10%); }
+        .pattern-detail-card.highlight-flash { animation: highlightFlash 2s ease-out; }
+        @keyframes highlightFlash { 0%, 100% { box-shadow: none; } 50% { box-shadow: 0 0 30px rgba(0, 212, 255, 0.6); } }
+        .pattern-detail-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .pattern-detail-title { flex: 1; }
+        .pattern-detail-title h3 { font-size: 24px; color: var(--text-primary); margin-bottom: 5px; }
+        .pattern-detail-title p { font-size: 14px; color: var(--text-secondary); }
+        .pattern-detected-tag { padding: 8px 16px; background: var(--green); color: white; border-radius: 6px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .pattern-description { font-size: 15px; color: var(--text-primary); line-height: 1.7; margin-bottom: 25px; padding: 15px; background: rgba(45, 55, 72, 0.3); border-radius: 8px; border-left: 3px solid var(--cyan); }
+        .pattern-subsection { margin-bottom: 25px; }
+        .pattern-subsection-title { font-size: 16px; font-weight: 600; color: var(--cyan); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .pattern-list { list-style: none; padding: 0; }
+        .pattern-list li { padding: 8px 0 8px 25px; position: relative; color: var(--text-primary); font-size: 14px; line-height: 1.6; }
+        .pattern-list li::before { content: '\2022'; position: absolute; left: 8px; color: var(--cyan); font-weight: bold; }
+        .pattern-list.warning-list li::before { content: '\2014'; font-size: 14px; }
+        .pattern-packets-example { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; }
+        .pattern-packet-line { font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 6px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .pattern-packet-type { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+        .pattern-packet-type.query, .pattern-packet-type.request, .pattern-packet-type.syn, .pattern-packet-type.discover { background: rgba(220, 40, 87, 0.2); color: var(--crimson); }
+        .pattern-packet-type.response, .pattern-packet-type.reply, .pattern-packet-type.synack, .pattern-packet-type.ack, .pattern-packet-type.offer { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+        .pattern-packet-type.data { background: rgba(0, 212, 255, 0.2); color: var(--cyan); }
+        .pattern-packet-text { color: var(--text-primary); flex: 1; min-width: 0; }
+        .pattern-packet-meta { color: var(--text-secondary); font-size: 11px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .metric-card { background: var(--bg-card-dark); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+        .metric-card-title { font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .metric-range { margin-bottom: 12px; }
+        .metric-range-label { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; font-weight: 600; }
+        .metric-range-icon.good { color: var(--green); }
+        .metric-range-icon.warning { color: #f59e0b; }
+        .metric-range-icon.bad { color: #ef4444; }
+        .metric-range-value { font-family: 'JetBrains Mono', monospace; font-size: 14px; padding-left: 28px; color: var(--text-secondary); }
+        .suspicious-pattern-card { background: var(--bg-card-dark); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+        .suspicious-pattern-title { font-size: 20px; font-weight: 600; color: var(--text-primary); margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .pattern-observed { background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; padding: 12px; border-radius: 6px; margin-bottom: 15px; }
+        .pattern-observed-title { font-size: 12px; font-weight: 600; color: #ef4444; text-transform: uppercase; margin-bottom: 6px; }
+        .pattern-observed-desc { font-size: 14px; color: var(--text-primary); }
+        .pattern-legitimate { background: rgba(63, 185, 80, 0.1); border-left: 3px solid var(--green); padding: 12px; border-radius: 6px; margin-bottom: 15px; }
+        .pattern-legitimate-title { font-size: 12px; font-weight: 600; color: var(--green); text-transform: uppercase; margin-bottom: 6px; }
+        .pattern-worry-when { background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; padding: 12px; border-radius: 6px; }
+        .pattern-worry-title { font-size: 12px; font-weight: 600; color: #fbbf24; text-transform: uppercase; margin-bottom: 6px; }
+        .pattern-card-mini { background: rgba(45, 55, 72, 0.3); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s; }
+        .pattern-card-mini:hover { border-color: var(--cyan); background: rgba(0, 212, 255, 0.05); box-shadow: 0 0 10px rgba(0, 212, 255, 0.2); }
+        .pattern-card-mini.detected { border-left: 3px solid var(--green); background: rgba(63, 185, 80, 0.05); }
+        .pattern-mini-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .pattern-mini-icon { font-size: 16px; }
+        .pattern-mini-title { font-size: 13px; font-weight: 600; color: var(--text-primary); flex: 1; }
+        .pattern-detected-badge { font-size: 10px; padding: 2px 6px; background: var(--green); color: white; border-radius: 3px; font-weight: 600; }
+        .pattern-mini-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px; }
+        .pattern-mini-example { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--cyan); background: var(--code-bg); padding: 6px 8px; border-radius: 4px; overflow-x: auto; }
+
+        /* App sidebar */
+        .app-sidebar {
+            position: fixed; top: 0; left: 0; height: 100vh; width: 56px;
+            background: var(--bg-secondary); border-right: 1px solid var(--border);
+            z-index: 900; display: flex; flex-direction: column;
+            transition: width 0.25s ease; overflow: hidden;
+        }
+        .app-sidebar:hover { width: 240px; }
+        .app-sidebar:hover .app-sidebar-label { opacity: 1; }
+        .app-sidebar-label { opacity: 0; white-space: nowrap; transition: opacity 0.2s ease; font-size: 13px; }
+        .app-sidebar-brand {
+            display: flex; align-items: center; gap: 10px; padding: 16px 16px 12px;
+            border-bottom: 1px solid var(--border); font-weight: 700; font-size: 18px;
+        }
+        .app-sidebar-brand .wire { color: var(--crimson); }
+        .app-sidebar-brand .trace { color: var(--cyan); }
+        .app-sidebar-section-title {
+            padding: 0 16px; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px;
+            color: var(--text-muted); white-space: nowrap; overflow: hidden;
+            opacity: 0; height: 0; transition: opacity 0.2s, height 0.2s, padding 0.2s;
+        }
+        .app-sidebar:hover .app-sidebar-section-title { opacity: 1; height: auto; padding: 14px 16px 6px; }
+        .app-sidebar-item {
+            display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+            color: var(--text-secondary); font-size: 13px; font-weight: 500;
+            cursor: pointer; transition: background 0.2s, color 0.2s;
+            border: none; background: none; width: 100%; text-align: left; font-family: inherit;
+        }
+        .app-sidebar-item:hover { background: var(--hover); color: var(--text-primary); }
+        .app-sidebar-icon { font-size: 18px; min-width: 24px; text-align: center; }
+        .app-sidebar-divider { height: 1px; background: var(--border); margin: 6px 12px; }
+        .container { margin-left: 56px; transition: margin-left 0.25s ease; }
+        .app-sidebar-hamburger {
+            display: none; position: fixed; top: 12px; left: 12px; z-index: 1001;
+            width: 40px; height: 40px; background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text-primary); font-size: 22px; cursor: pointer;
+            align-items: center; justify-content: center;
+        }
+        .app-sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 899; }
+        .app-sidebar-overlay.open { display: block; }
+        @media (max-width: 768px) {
+            .app-sidebar { width: 0; transform: translateX(-100%); }
+            .app-sidebar:hover { width: 0; }
+            .app-sidebar.mobile-open { width: 260px; transform: translateX(0); }
+            .app-sidebar.mobile-open .app-sidebar-label { opacity: 1; }
+            .app-sidebar.mobile-open .app-sidebar-section-title { opacity: 1; height: auto; padding: 14px 16px 6px; }
+            .app-sidebar-hamburger { display: flex; }
+            .container { margin-left: 0; padding-top: 56px; }
+        }
+        @media (max-width: 1024px) {
+            .split-layout { grid-template-columns: 1fr; height: auto; }
+            .sidebar { border-top: 1px solid var(--border); border-right: none; }
+        }
+
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3d4758; }
+        html { scroll-behavior: smooth; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <button class="app-sidebar-hamburger" onclick="toggleAppSidebar()">&#9776;</button>
+    <div class="app-sidebar-overlay" id="appSidebarOverlay" onclick="toggleAppSidebar()"></div>
+
+    <nav id="appSidebar" class="app-sidebar">
+        <div class="app-sidebar-brand">
+            <span class="app-sidebar-icon" style="font-size:18px;color:var(--crimson);">&#9670;</span>
+            <span class="app-sidebar-label"><span class="wire">Voda</span><span class="trace">Trace</span></span>
+        </div>
+        <div class="app-sidebar-section-title">General</div>
+        <button class="app-sidebar-item" onclick="sidebarAction('home')">
+            <span class="app-sidebar-icon">&#8962;</span>
+            <span class="app-sidebar-label">Home / Main Tool</span>
+        </button>
+        <button class="app-sidebar-item" onclick="sidebarAction('guide')">
+            <span class="app-sidebar-icon">&#9776;</span>
+            <span class="app-sidebar-label">Reference Guide</span>
+        </button>
+        <button class="app-sidebar-item" onclick="sidebarAction('patterns')">
+            <span class="app-sidebar-icon">&#9830;</span>
+            <span class="app-sidebar-label">Traffic Patterns</span>
+        </button>
+        <div class="app-sidebar-divider"></div>
+    </nav>
+
+    <div class="container">
+        <div id="mainTool">
+            <header class="header">
+                <div class="header-content">
+                    <h1><span class="wire">Voda</span><span class="trace">Trace</span></h1>
+                    <p class="subtitle">PCAP & Event Logs Analysis Tool</p>
+                    <p class="attribution">Created by Moaz Essam</p>
+                </div>
+            </header>
+
+            <!-- Persistent Drop Zone Bar -->
+            <div class="drop-bar" id="dropBar">
+                <div class="drop-bar-header" onclick="toggleDropBar()">
+                    <div class="drop-bar-header-left">
+                        <span class="icon">&#128193;</span>
+                        <span>File Upload</span>
+                        <div class="drop-bar-badges" id="dropBarBadges"></div>
+                    </div>
+                    <span class="drop-bar-chevron" id="dropBarChevron">&#9660;</span>
+                </div>
+                <div class="drop-bar-body" id="dropBarBody">
+                    <div class="drop-zone-mini pcap-zone" id="pcapDropZone">
+                        <div class="dz-icon">&#128300;</div>
+                        <div class="dz-title">PCAP Packet Capture</div>
+                        <div class="dz-hint">Drop .pcap or .pcapng</div>
+                        <div class="dz-file-info" id="pcapFileInfo" style="display:none"></div>
+                        <input type="file" id="pcapFileInput" accept=".pcap,.pcapng" style="display:none">
+                    </div>
+                    <div class="drop-zone-mini event-zone" id="eventDropZone">
+                        <div class="dz-icon">&#128203;</div>
+                        <div class="dz-title">Event Log</div>
+                        <div class="dz-hint">Drop .log, .csv, or .txt</div>
+                        <div class="dz-file-info" id="eventFileInfo" style="display:none"></div>
+                        <input type="file" id="eventFileInput" accept=".log,.csv,.txt" style="display:none">
+                    </div>
+                </div>
+                <div class="progress-container" id="progressContainer" style="padding: 0 18px 10px;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText"></div>
+                </div>
+            </div>
+
+            <!-- Viewer Tabs -->
+            <div class="viewer-tabs" id="viewerTabs">
+                <button class="viewer-tab-btn pcap-tab" id="tabPcap" onclick="switchViewerTab('pcap')">
+                    &#128300; PCAP <span class="tab-count" id="tabPcapCount"></span>
+                </button>
+                <button class="viewer-tab-btn event-tab" id="tabEvent" onclick="switchViewerTab('event')">
+                    &#128203; Event Log <span class="tab-count" id="tabEventCount"></span>
+                </button>
+                <button class="viewer-tab-btn combined-tab" id="tabCombined" onclick="switchViewerTab('combined')" style="display:none">
+                    &#128279; Combined Findings
+                </button>
+            </div>
+
+            <!-- PCAP Viewer -->
+            <div class="viewer" id="pcapViewer">
+                <div class="toolbar">
+                    <input type="text" id="packetFilter" placeholder="IP, MAC, protocol..." style="min-width:200px;">
+                    <span style="color:var(--text-secondary);font-size:11px;font-weight:600;">From</span>
+                    <input type="text" id="pcapTimeFrom" placeholder="HH:MM:SS" style="width:100px;min-width:auto;font-size:12px;">
+                    <span style="color:var(--text-secondary);font-size:11px;font-weight:600;">To</span>
+                    <input type="text" id="pcapTimeTo" placeholder="HH:MM:SS" style="width:100px;min-width:auto;font-size:12px;">
+                    <select id="protocolFilter">
+                        <option value="">All Protocols</option>
+                    </select>
+                    <button class="btn-apply" onclick="applyPCAPFilters()">Apply</button>
+                    <button class="btn-clear" onclick="clearPCAPFilters()">Clear</button>
+                    <div class="time-controls">
+                        <span class="time-label">Time:</span>
+                        <button class="time-btn" onclick="setTimeFormat('relative')">Relative</button>
+                        <button class="time-btn active" onclick="setTimeFormat('absolute')">Absolute</button>
+                    </div>
+                    <select id="displayLimit" onchange="pcapWindowStart=0;renderPacketTable()">
+                        <option value="1000">1,000</option>
+                        <option value="5000">5,000</option>
+                        <option value="10000">10,000</option>
+                        <option value="0">All</option>
+                    </select>
+                    <button class="btn-clear" onclick="movePcapWindow(-1)" title="Previous page" style="padding:8px 12px;">&#9664;</button>
+                    <span class="packet-count" id="pcapWindowLabel" style="min-width:90px;text-align:center;"></span>
+                    <button class="btn-clear" onclick="movePcapWindow(1)" title="Next page" style="padding:8px 12px;">&#9654;</button>
+                    <span class="packet-count" id="packetCount">0 packets</span>
+                </div>
+                <div class="split-layout">
+                    <div class="packet-list">
+                        <table>
+                            <thead><tr>
+                                <th>NO.</th>
+                                <th>TIME</th>
+                                <th>SOURCE</th>
+                                <th>DESTINATION</th>
+                                <th>PROTOCOL</th>
+                                <th>LENGTH</th>
+                                <th>INFO</th>
+                            </tr></thead>
+                            <tbody id="packetTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="sidebar">
+                        <div class="sidebar-tabs">
+                            <div class="sidebar-tab active" data-pcap-tab="details" onclick="switchSidebarTab('details')">&#128230; Details</div>
+                            <div class="sidebar-tab" data-pcap-tab="endpoints" onclick="switchSidebarTab('endpoints')">&#127760; Endpoints</div>
+                            <div class="sidebar-tab" data-pcap-tab="security" onclick="switchSidebarTab('security')">&#128737;&#65039; Security</div>
+                        </div>
+                        <div class="sidebar-content active" data-pcap-panel="details">
+                            <div class="detail-section">
+                                <h3>&#128230; Packet Details</h3>
+                                <div id="packetDetailsContent"><p class="text-muted" style="text-align:center;padding:20px;">Click a packet to view details</p></div>
+                            </div>
+                            <div class="detail-section">
+                                <h3>&#128202; Capture Statistics</h3>
+                                <div id="pcapStats"></div>
+                            </div>
+                        </div>
+                        <div class="sidebar-content" data-pcap-panel="endpoints">
+                            <div class="detail-section"><h3>&#128187; IP Endpoints</h3><div id="ipEndpoints"></div></div>
+                            <div class="detail-section"><h3>&#128268; MAC Endpoints</h3><div id="macEndpoints"></div></div>
+                        </div>
+                        <div class="sidebar-content" data-pcap-panel="security">
+                            <div class="detail-section">
+                                <h3>&#128737;&#65039; Rogue Device Detection</h3>
+                                <div id="rogueDevicesContent"><p class="security-ok">&#9989; No suspicious devices detected</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="viewer-footer">
+                    <span class="filename" id="currentFilename"></span>
+                </div>
+            </div>
+
+            <!-- Event Log Viewer -->
+            <div class="viewer" id="eventViewer">
+                <div class="toolbar">
+                    <input type="text" id="eventFilter" placeholder="MAC, keyword, category..." style="min-width:200px;">
+                    <span style="color:var(--text-secondary);font-size:11px;font-weight:600;">From</span>
+                    <input type="text" id="eventTimeFrom" placeholder="HH:MM:SS" style="width:100px;min-width:auto;font-size:12px;">
+                    <span style="color:var(--text-secondary);font-size:11px;font-weight:600;">To</span>
+                    <input type="text" id="eventTimeTo" placeholder="HH:MM:SS" style="width:100px;min-width:auto;font-size:12px;">
+                    <select id="categoryFilter"><option value="">All Categories</option></select>
+                    <select id="severityFilter"><option value="">All Severities</option></select>
+                    <button class="btn-apply" onclick="applyEventFilters()">Apply</button>
+                    <button class="btn-clear" onclick="clearEventFilters()">Clear</button>
+                    <select id="eventDisplayLimit" onchange="eventWindowStart=0;renderEventTable()">
+                        <option value="1000">1,000</option>
+                        <option value="5000">5,000</option>
+                        <option value="10000">10,000</option>
+                        <option value="0">All</option>
+                    </select>
+                    <button class="btn-clear" onclick="moveEventWindow(-1)" title="Previous page" style="padding:8px 12px;">&#9664;</button>
+                    <span class="packet-count" id="eventWindowLabel" style="min-width:90px;text-align:center;"></span>
+                    <button class="btn-clear" onclick="moveEventWindow(1)" title="Next page" style="padding:8px 12px;">&#9654;</button>
+                    <span class="packet-count" id="eventCount">0 events</span>
+                </div>
+                <div class="split-layout">
+                    <div class="packet-list">
+                        <table>
+                            <thead><tr>
+                                <th>#</th>
+                                <th>DATE/TIME</th>
+                                <th>CATEGORY</th>
+                                <th>SEVERITY</th>
+                                <th>DETAILS</th>
+                            </tr></thead>
+                            <tbody id="eventTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="sidebar">
+                        <div class="sidebar-tabs">
+                            <div class="sidebar-tab active" data-event-tab="details" onclick="switchEventSidebarTab('details')">&#128203; Details</div>
+                        </div>
+                        <div class="sidebar-content active" data-event-panel="details">
+                            <div class="detail-section">
+                                <h3>&#128203; Event Details</h3>
+                                <div id="eventDetailsContent"><p class="text-muted" style="text-align:center;padding:20px;">Click an event to view details</p></div>
+                            </div>
+                            <div class="detail-section">
+                                <h3>&#128202; Pattern Analysis</h3>
+                                <div id="eventPatterns"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="viewer-footer">
+                    <span class="filename" id="eventFilename"></span>
+                </div>
+            </div>
+
+            <!-- Combined Findings Viewer -->
+            <div class="viewer" id="combinedViewer">
+                <div style="padding: 20px;">
+                    <div id="combinedFindingsContent">
+                        <p class="text-muted" style="text-align:center;padding:40px;">Load a PCAP or Event Log file to see findings here.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TCP Stream Modal -->
+        <div id="tcpStreamModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>&#128279; TCP Stream Viewer</h2>
+                    <button class="modal-close" onclick="closeStreamModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="streamInfo" class="stream-header"></div>
+                    <div id="streamData" class="stream-content"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="action-btn" onclick="exportTCPStream()">&#128190; Export Stream</button>
+                    <button class="action-btn-secondary action-btn" onclick="closeStreamModal()">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reference Guide -->
+        <div id="referenceGuide" class="ref-guide">
+            <header class="header">
+                <div class="header-content">
+                    <a href="#" class="back-link" onclick="showMainTool(); return false;">&#8592; Back to WireTrace</a>
+                    <h1><span class="wire">Voda</span><span class="trace">Trace</span> Reference Guide</h1>
+                    <p class="subtitle">Network Analysis Terminology & Data Interpretation</p>
+                </div>
+            </header>
+            <nav class="toc">
+                <h2>&#128209; Table of Contents</h2>
+                <ul class="toc-list">
+                    <li class="toc-item"><a href="#jargon-buster" class="toc-link"><span class="toc-icon">&#128292;</span><span class="toc-title">Jargon Buster</span></a></li>
+                    <li class="toc-item"><a href="#data-interpretation" class="toc-link"><span class="toc-icon">&#128202;</span><span class="toc-title">Data Interpretation Guide</span></a></li>
+                </ul>
+            </nav>
+            <!-- Jargon Buster & Data Interpretation sections preserved from original -->
+            <section id="jargon-buster" class="section">
+                <div class="section-header"><span class="section-icon">&#128292;</span><h2 class="section-title">Jargon Buster</h2></div>
+                <div class="subsection"><h3 class="subsection-title">PCAP & Network Terms</h3><div class="guide-grid" id="jargonGrid"></div></div>
+            </section>
+            <section id="data-interpretation" class="section">
+                <div class="section-header"><span class="section-icon">&#128202;</span><h2 class="section-title">Data Interpretation Guide</h2></div>
+                <div class="subsection" id="dataInterpretation"></div>
+            </section>
+        </div>
+
+        <!-- Patterns Guide -->
+        <div id="patternsGuide" class="ref-guide">
+            <header class="header">
+                <div class="header-content">
+                    <a href="#" class="back-link" onclick="showMainTool(); return false;">&#8592; Back to WireTrace</a>
+                    <h1><span class="wire">Traffic</span><span class="trace">Patterns</span> Guide</h1>
+                    <p class="subtitle">Understanding Normal Network Behavior</p>
+                </div>
+            </header>
+            <div class="patterns-nav">
+                <button class="patterns-nav-btn active" onclick="switchPatternsSection('healthy', this)">Healthy Patterns</button>
+                <button class="patterns-nav-btn" onclick="switchPatternsSection('metrics', this)">Baseline Metrics</button>
+                <button class="patterns-nav-btn" onclick="switchPatternsSection('suspicious', this)">Looks Suspicious (But Normal)</button>
+            </div>
+            <div id="healthyPatternsSection" class="patterns-section active">
+                <div class="section-header"><h2 style="font-size:24px; color:var(--text-primary); margin-bottom:8px;">Healthy Traffic Patterns</h2></div>
+                <p class="section-intro">These are common, legitimate network traffic patterns you'll see in normal operation. Patterns detected in your current capture are highlighted.</p>
+                <div id="healthyPatternsList"></div>
+            </div>
+            <div id="metricsSection" class="patterns-section">
+                <div class="section-header"><h2 style="font-size:24px; color:var(--text-primary); margin-bottom:8px;">Baseline Metrics</h2></div>
+                <p class="section-intro">Reference values to help you understand what's "normal" vs. "problematic"</p>
+                <div class="metrics-grid" id="metricsGrid"></div>
+            </div>
+            <div id="suspiciousSection" class="patterns-section">
+                <div class="section-header"><h2 style="font-size:24px; color:var(--text-primary); margin-bottom:8px;">Looks Suspicious (But Usually Normal)</h2></div>
+                <p class="section-intro">These patterns can raise false alarms. Learn when they're legitimate vs. actually concerning.</p>
+                <div id="suspiciousPatternsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ============================================
+    // GLOBAL STATE
+    // ============================================
+    let activeViewerTab = null; // 'pcap', 'event', 'combined'
+    let allPackets = [];
+    let filteredPackets = [];
+    let allEvents = [];
+    let filteredEvents = [];
+    let selectedItem = null;
+    let timeDisplayFormat = 'absolute';
+    let pcapFirstTimestamp = null;
+    let stats = {};
+    let currentEventStats = null;
+    let findingsVisibleCount = 10;
+    let activeFindingFilter = null;
+    let pcapFindings = [];
+    let pcapFindingsSummary = { total: 0, high: 0, medium: 0, low: 0 };
+    let ipEndpoints = new Map();
+    let macEndpoints = new Map();
+    let tcpStreams = new Map();
+    let rogueDevices = [];
+    let hexDumpExpanded = false;
+    let legitimateGatewayMAC = null;
+    let pcapWindowStart = 0;
+    let eventWindowStart = 0;
+    let pcapLoaded = false;
+    let eventLoaded = false;
+    let pcapFilename = '';
+    let eventFilename = '';
+
+    const PCAP_FINDING_THRESHOLDS = {
+        TCP_FAILED_HANDSHAKE_SYN: 20, TCP_RST_THRESHOLD: 50, TCP_DUP_SYN_WINDOW_SEC: 3,
+        DNS_NXDOMAIN_THRESHOLD: 10, DNS_UNANSWERED_THRESHOLD: 10, DHCP_BURST_THRESHOLD: 20,
+        ARP_GATEWAY_REQUEST_THRESHOLD: 30, PPPOE_PADI_THRESHOLD: 10, PPPOE_PADT_THRESHOLD: 1,
+        ONE_WAY_RATIO_THRESHOLD: 50, MAX_PACKET_NOS: 10, MAX_EXAMPLES: 5
+    };
+
+    // ============================================
+    // DROP BAR LOGIC
+    // ============================================
+    function toggleDropBar() {
+        document.getElementById('dropBar').classList.toggle('collapsed');
+    }
+
+    function updateDropBarBadges() {
+        const badges = document.getElementById('dropBarBadges');
+        let html = '';
+        if (pcapLoaded) {
+            html += `<span class="file-badge pcap-badge">${truncate(pcapFilename, 20)} (${allPackets.length.toLocaleString()} pkts) <span class="badge-x" onclick="event.stopPropagation(); removePcapFile()">&#10005;</span></span>`;
+        }
+        if (eventLoaded) {
+            html += `<span class="file-badge event-badge">${truncate(eventFilename, 20)} (${allEvents.length.toLocaleString()} evts) <span class="badge-x" onclick="event.stopPropagation(); removeEventFile()">&#10005;</span></span>`;
+        }
+        badges.innerHTML = html;
+    }
+
+    function removePcapFile() {
+        pcapLoaded = false;
+        pcapFilename = '';
+        allPackets = [];
+        filteredPackets = [];
+        pcapFindings = [];
+        pcapFindingsSummary = { total: 0, high: 0, medium: 0, low: 0 };
+        ipEndpoints.clear();
+        macEndpoints.clear();
+        tcpStreams.clear();
+        rogueDevices = [];
+        stats = {};
+
+        document.getElementById('pcapDropZone').classList.remove('has-file');
+        document.getElementById('pcapFileInfo').style.display = 'none';
+        updateDropBarBadges();
+        updateViewerTabs();
+        renderCombinedFindings();
+    }
+
+    function removeEventFile() {
+        eventLoaded = false;
+        eventFilename = '';
+        allEvents = [];
+        filteredEvents = [];
+        currentEventStats = null;
+        activeFindingFilter = null;
+
+        document.getElementById('eventDropZone').classList.remove('has-file');
+        document.getElementById('eventFileInfo').style.display = 'none';
+        updateDropBarBadges();
+        updateViewerTabs();
+        renderCombinedFindings();
+    }
+
+    // Wire up drop zones
+    function setupDropZone(zoneId, inputId, type) {
+        const zone = document.getElementById(zoneId);
+        const input = document.getElementById(inputId);
+
+        zone.addEventListener('click', () => input.click());
+        zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+        zone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+            if (e.dataTransfer.files[0]) processFileForType(e.dataTransfer.files[0], type);
+        });
+        input.addEventListener('change', (e) => {
+            if (e.target.files[0]) processFileForType(e.target.files[0], type);
+        });
+    }
+
+    function processFileForType(file, type) {
+        const ext = file.name.toLowerCase().split('.').pop();
+        if (type === 'pcap') {
+            if (!['pcap', 'pcapng'].includes(ext)) { alert('Please select a PCAP file (.pcap or .pcapng)'); return; }
+            processPcapFile(file);
+        } else {
+            if (!['log', 'csv', 'txt'].includes(ext)) { alert('Please select an event log file (.log, .csv, or .txt)'); return; }
+            processEventFile(file);
+        }
+    }
+
+    function showProgress(show) { document.getElementById('progressContainer').classList.toggle('show', show); }
+    function updateProgress(pct, text) {
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('progressText').textContent = text;
+    }
+
+    async function processPcapFile(file) {
+        showProgress(true);
+        updateProgress(0, `Loading ${file.name}...`);
+        try {
+            const buffer = await file.arrayBuffer();
+            await analyzePCAP(buffer, file.name);
+            pcapLoaded = true;
+            pcapFilename = file.name;
+            document.getElementById('pcapDropZone').classList.add('has-file');
+            const fi = document.getElementById('pcapFileInfo');
+            fi.textContent = `${file.name} (${allPackets.length.toLocaleString()} packets)`;
+            fi.style.display = 'block';
+            document.getElementById('currentFilename').textContent = file.name;
+            updateDropBarBadges();
+            updateTimePlaceholders();
+            document.getElementById('dropBar').classList.add('collapsed');
+            updateViewerTabs();
+            switchViewerTab('pcap');
+            renderCombinedFindings();
+        } catch (error) {
+            console.error('Error:', error);
+            alert(`Error: ${error.message}`);
+        }
+        setTimeout(() => showProgress(false), 500);
+    }
+
+    async function processEventFile(file) {
+        showProgress(true);
+        updateProgress(0, `Loading ${file.name}...`);
+        try {
+            const text = await file.text();
+            await analyzeEventLog(text, file.name);
+            eventLoaded = true;
+            eventFilename = file.name;
+            document.getElementById('eventDropZone').classList.add('has-file');
+            const fi = document.getElementById('eventFileInfo');
+            fi.textContent = `${file.name} (${allEvents.length.toLocaleString()} events)`;
+            fi.style.display = 'block';
+            document.getElementById('eventFilename').textContent = file.name;
+            updateDropBarBadges();
+            updateTimePlaceholders();
+            document.getElementById('dropBar').classList.add('collapsed');
+            updateViewerTabs();
+            switchViewerTab('event');
+            renderCombinedFindings();
+        } catch (error) {
+            console.error('Error:', error);
+            alert(`Error: ${error.message}`);
+        }
+        setTimeout(() => showProgress(false), 500);
+    }
+
+    // ============================================
+    // VIEWER TABS
+    // ============================================
+    function updateViewerTabs() {
+        const tabBar = document.getElementById('viewerTabs');
+        const pcapTab = document.getElementById('tabPcap');
+        const eventTab = document.getElementById('tabEvent');
+        const combinedTab = document.getElementById('tabCombined');
+
+        if (!pcapLoaded && !eventLoaded) {
+            tabBar.classList.remove('show');
+            document.getElementById('pcapViewer').classList.remove('show');
+            document.getElementById('eventViewer').classList.remove('show');
+            document.getElementById('combinedViewer').classList.remove('show');
+            activeViewerTab = null;
+            updateAppSidebarState();
+            return;
+        }
+
+        tabBar.classList.add('show');
+        pcapTab.style.display = pcapLoaded ? '' : 'none';
+        eventTab.style.display = eventLoaded ? '' : 'none';
+        // Show combined tab when both loaded, or when either has findings
+        const hasPcapFindings = pcapFindings && pcapFindings.length > 0;
+        const hasEventFindings = currentEventStats && currentEventStats.findings && currentEventStats.findings.length > 0;
+        combinedTab.style.display = (hasPcapFindings || hasEventFindings) ? '' : 'none';
+
+        if (pcapLoaded) document.getElementById('tabPcapCount').textContent = allPackets.length.toLocaleString();
+        if (eventLoaded) document.getElementById('tabEventCount').textContent = allEvents.length.toLocaleString();
+
+        // If current tab is no longer valid, switch
+        if (activeViewerTab === 'pcap' && !pcapLoaded) switchViewerTab(eventLoaded ? 'event' : null);
+        else if (activeViewerTab === 'event' && !eventLoaded) switchViewerTab(pcapLoaded ? 'pcap' : null);
+        else if (activeViewerTab === 'combined' && !hasPcapFindings && !hasEventFindings) switchViewerTab(pcapLoaded ? 'pcap' : 'event');
+
+        updateAppSidebarState();
+    }
+
+    function switchViewerTab(tab) {
+        activeViewerTab = tab;
+        const tabs = ['pcap', 'event', 'combined'];
+        const viewers = { pcap: 'pcapViewer', event: 'eventViewer', combined: 'combinedViewer' };
+        const btns = { pcap: 'tabPcap', event: 'tabEvent', combined: 'tabCombined' };
+
+        tabs.forEach(t => {
+            const v = document.getElementById(viewers[t]);
+            const b = document.getElementById(btns[t]);
+            if (t === tab) {
+                v.classList.add('show');
+                v.classList.remove('no-tabs');
+                b.classList.add('active');
+            } else {
+                v.classList.remove('show');
+                b.classList.remove('active');
+            }
+        });
+    }
+
+    // ============================================
+    // SHOW/HIDE SECTIONS
+    // ============================================
+    function showReferenceGuide() {
+        document.getElementById('mainTool').style.display = 'none';
+        document.getElementById('patternsGuide').classList.remove('show');
+        document.getElementById('referenceGuide').classList.add('show');
+        window.scrollTo(0, 0);
+        renderReferenceGuide();
+    }
+
+    function showMainTool() {
+        document.getElementById('referenceGuide').classList.remove('show');
+        document.getElementById('patternsGuide').classList.remove('show');
+        document.getElementById('mainTool').style.display = 'block';
+        window.scrollTo(0, 0);
+    }
+
+    function showPatternsPage() {
+        document.getElementById('mainTool').style.display = 'none';
+        document.getElementById('referenceGuide').classList.remove('show');
+        document.getElementById('patternsGuide').classList.add('show');
+        window.scrollTo(0, 0);
+        renderHealthyPatterns();
+        renderMetrics();
+        renderSuspiciousPatterns();
+    }
+
+    // ============================================
+    // PCAP PARSING (preserved from original)
+    // ============================================
+    async function analyzePCAP(buffer, filename) {
+        updateProgress(5, 'Reading PCAP header...');
+        const view = new DataView(buffer);
+        const magic_le = view.getUint32(0, true);
+        const magic_be = view.getUint32(0, false);
+        let isLittleEndian;
+        if (magic_le === 0xa1b2c3d4) isLittleEndian = true;
+        else if (magic_be === 0xa1b2c3d4) isLittleEndian = false;
+        else throw new Error('Invalid PCAP magic number');
+        const linkType = view.getUint32(20, isLittleEndian);
+
+        allPackets = [];
+        ipEndpoints.clear(); macEndpoints.clear(); tcpStreams.clear();
+        rogueDevices = []; pcapFindings = [];
+        pcapFindingsSummary = { total:0, high:0, medium:0, low:0 };
+        legitimateGatewayMAC = null; hexDumpExpanded = false;
+        let offset = 24, packetCount = 0, firstPacketAbsTime = null;
+
+        updateProgress(10, 'Parsing packets...');
+        try {
+            while (offset < buffer.byteLength - 16 && packetCount < 1000000) {
+                let batchCount = 0;
+                while (batchCount < 500 && offset < buffer.byteLength - 16) {
+                    const tsSec = view.getUint32(offset, isLittleEndian);
+                    const tsUsec = view.getUint32(offset + 4, isLittleEndian);
+                    const inclLen = view.getUint32(offset + 8, isLittleEndian);
+                    if (inclLen === 0 || inclLen > 65535 || offset + 16 + inclLen > buffer.byteLength) { offset += 16; continue; }
+                    if (inclLen < 14) { offset += 16 + inclLen; continue; }
+                    const absTimestamp = tsSec + (tsUsec / 1000000);
+                    if (firstPacketAbsTime === null) { firstPacketAbsTime = absTimestamp; pcapFirstTimestamp = firstPacketAbsTime; }
+                    const relativeTime = absTimestamp - firstPacketAbsTime;
+                    const packetData = buffer.slice(offset + 16, offset + 16 + inclLen);
+                    try {
+                        const packet = parsePacket(packetData, packetCount + 1, absTimestamp, relativeTime, linkType);
+                        packet.rawData = packetData; packet.absTimestamp = absTimestamp; packet.relativeTime = relativeTime;
+                        allPackets.push(packet);
+                        trackEndpoint(packet);
+                    } catch (e) {
+                        allPackets.push({ no: packetCount+1, absTimestamp, relativeTime, timestamp: relativeTime.toFixed(6), length: inclLen, protocol: 'ERROR', source: 'Parse Error', destination: 'N/A', info: 'Failed: '+e.message, layers: {} });
+                    }
+                    packetCount++; batchCount++; offset += 16 + inclLen;
+                }
+                if (packetCount % 1000 === 0 || packetCount < 1000) {
+                    updateProgress(10 + (offset / buffer.byteLength) * 85, `Parsed ${packetCount.toLocaleString()} packets`);
+                    await new Promise(r => setTimeout(r, 0));
+                }
+            }
+        } catch (e) { console.error('Parsing error:', e); }
+
+        updateProgress(95, 'Calculating statistics...');
+        stats = calculatePCAPStatistics(allPackets, filename, allPackets.length > 0 ? allPackets[allPackets.length-1].relativeTime : 0);
+        detectARPSpoofingFromPackets();
+        const fr = analyzePCAPFindings(allPackets, stats);
+        pcapFindings = fr.findings; pcapFindingsSummary = fr.summary;
+        updateProgress(100, `Complete! Loaded ${allPackets.length.toLocaleString()} packets`);
+
+        filteredPackets = allPackets;
+        renderPacketTable();
+        updatePCAPStatistics();
+        populateProtocolFilter();
+        renderEndpoints();
+        analyzeTrafficPatterns();
+    }
+
+    // All parsing functions preserved identically from original
+    function parsePacket(buffer, number, absTimestamp, relativeTime, linkType) {
+        const packet = { no: number, absTimestamp, relativeTime, timestamp: relativeTime.toFixed(6), length: buffer.byteLength, protocol: 'UNKNOWN', source: '', destination: '', info: '', layers: {}, rawData: buffer };
+        if (linkType === 1) return parseEthernet(buffer, 0, packet);
+        else if (linkType === 113) return parseLinuxSLL(buffer, 0, packet);
+        packet.protocol = 'UNSUPPORTED'; packet.info = `Link type: ${linkType}`; return packet;
+    }
+    function parseLinuxSLL(buffer, offset, packet) {
+        const view = new DataView(buffer);
+        if (buffer.byteLength < offset + 16) throw new Error('Truncated SLL header');
+        const packetType = view.getUint16(offset, false); const addrLen = view.getUint16(offset + 4, false);
+        const protocolType = view.getUint16(offset + 14, false);
+        let sourceMAC = '';
+        if (addrLen >= 6) { const ab = new Uint8Array(buffer, offset + 6, 6); sourceMAC = Array.from(ab).map(b => b.toString(16).padStart(2,'0')).join(':'); }
+        const sllTypes = {0:'To us',1:'Broadcast',2:'Multicast',3:'Other host',4:'Outgoing'};
+        packet.layers.sll = { packetType: sllTypes[packetType]||`Type ${packetType}`, arphrdType: view.getUint16(offset+2,false), addressLength: addrLen, protocolType: `0x${protocolType.toString(16).padStart(4,'0')}`, sourceAddress: sourceMAC };
+        packet.source = sourceMAC || packet.layers.sll.packetType; packet.destination = 'Linux SLL';
+        const po = offset + 16;
+        if (protocolType === 0x8100 && buffer.byteLength >= po + 4) return parseVLAN(buffer, po, packet, packet.source, packet.destination);
+        return parseEtherType(protocolType, buffer, po, packet, packet.source, packet.destination);
+    }
+    function parseEthernet(buffer, offset, packet) {
+        const view = new DataView(buffer);
+        if (buffer.byteLength < offset + 14) throw new Error('Truncated Ethernet frame');
+        const dstMAC = formatMAC(buffer, offset); const srcMAC = formatMAC(buffer, offset + 6);
+        const ethType = view.getUint16(offset + 12, false);
+        packet.layers.ethernet = { destination: dstMAC, source: srcMAC, type: `0x${ethType.toString(16).padStart(4,'0')}` };
+        packet.source = srcMAC; packet.destination = dstMAC; packet.protocol = 'Ethernet';
+        if (ethType === 0x8100 && buffer.byteLength >= offset + 18) return parseVLAN(buffer, offset + 14, packet, srcMAC, dstMAC);
+        return parseEtherType(ethType, buffer, offset + 14, packet, srcMAC, dstMAC);
+    }
+    function parseVLAN(buffer, offset, packet, src, dst) {
+        const view = new DataView(buffer);
+        if (buffer.byteLength < offset + 4) throw new Error('Truncated VLAN tag');
+        const vlanTCI = view.getUint16(offset, false); const vlanId = vlanTCI & 0x0FFF;
+        packet.layers.vlan = { id: vlanId, priority: (vlanTCI >> 13) & 0x07 };
+        packet.protocol = 'VLAN'; packet.info = `VLAN ${vlanId} - `;
+        return parseEtherType(view.getUint16(offset + 2, false), buffer, offset + 4, packet, src, dst);
+    }
+    function parseEtherType(ethType, buffer, offset, packet, src, dst) {
+        switch (ethType) {
+            case 0x0800: return parseIPv4(buffer, offset, packet, src, dst);
+            case 0x0806: return parseARP(buffer, offset, packet);
+            case 0x86dd: return parseIPv6(buffer, offset, packet);
+            case 0x8863: return parsePPPoE(buffer, offset, packet, 'Discovery');
+            case 0x8864: return parsePPPoE(buffer, offset, packet, 'Session');
+            default: packet.protocol = 'OTHER'; packet.source = src; packet.destination = dst; packet.info += `EtherType: 0x${ethType.toString(16).padStart(4,'0')}`; return packet;
+        }
+    }
+    function parseIPv4(buffer, offset, packet, src, dst) {
+        const view = new DataView(buffer);
+        if (buffer.byteLength < offset + 20) throw new Error('Truncated IPv4 header');
+        const vIHL = view.getUint8(offset); const ihl = (vIHL & 0x0F) * 4; const protocol = view.getUint8(offset + 9);
+        const srcIP = [view.getUint8(offset+12),view.getUint8(offset+13),view.getUint8(offset+14),view.getUint8(offset+15)].join('.');
+        const dstIP = [view.getUint8(offset+16),view.getUint8(offset+17),view.getUint8(offset+18),view.getUint8(offset+19)].join('.');
+        packet.layers.ip = { version: 4, headerLength: ihl, protocol, source: srcIP, destination: dstIP };
+        packet.protocol = 'IPv4'; packet.source = srcIP; packet.destination = dstIP;
+        switch (protocol) { case 6: return parseTCP(buffer, offset+ihl, packet, srcIP, dstIP); case 17: return parseUDP(buffer, offset+ihl, packet, srcIP, dstIP); case 1: return parseICMP(buffer, offset+ihl, packet, srcIP, dstIP); default: packet.info = `Protocol: ${protocol}`; }
+        return packet;
+    }
+    function parseIPv6(buffer, offset, packet) {
+        const view = new DataView(buffer);
+        if (buffer.byteLength < offset + 40) throw new Error('Truncated IPv6 header');
+        const srcIP = extractIPv6Address(buffer, offset + 8); const dstIP = extractIPv6Address(buffer, offset + 24);
+        packet.layers.ipv6 = { version: 6, nextHeader: view.getUint8(offset + 6), source: srcIP, destination: dstIP };
+        packet.protocol = 'IPv6'; packet.source = srcIP; packet.destination = dstIP; packet.info = `IPv6 Next: ${view.getUint8(offset+6)}`;
+        return packet;
+    }
+    function extractIPv6Address(buffer, offset) { const b = new Uint8Array(buffer, offset, 16); const p = []; for (let i = 0; i < 16; i += 2) p.push((b[i] << 8 | b[i+1]).toString(16)); return p.join(':'); }
+    function parseTCP(buffer, offset, packet, srcIP, dstIP) {
+        const view = new DataView(buffer);
+        if (buffer.byteLength < offset + 20) throw new Error('Truncated TCP header');
+        const srcPort = view.getUint16(offset, false); const dstPort = view.getUint16(offset+2, false);
+        const seqNum = view.getUint32(offset+4, false); const ackNum = view.getUint32(offset+8, false);
+        const flags = view.getUint8(offset + 13);
+        packet.layers.tcp = { sourcePort: srcPort, destinationPort: dstPort, sequenceNumber: seqNum, acknowledgmentNumber: ackNum, flags: { fin:!!(flags&0x01), syn:!!(flags&0x02), rst:!!(flags&0x04), psh:!!(flags&0x08), ack:!!(flags&0x10), urg:!!(flags&0x20) } };
+        packet.protocol = 'TCP'; packet.source = `${srcIP}:${srcPort}`; packet.destination = `${dstIP}:${dstPort}`;
+        const fs = []; if(flags&0x02) fs.push('SYN'); if(flags&0x10) fs.push('ACK'); if(flags&0x01) fs.push('FIN'); if(flags&0x04) fs.push('RST');
+        if (srcPort===80||dstPort===80||srcPort===443||dstPort===443) { packet.protocol = srcPort===443||dstPort===443?'HTTPS':'HTTP'; packet.info = `${packet.protocol} ${fs.join(', ')}`; }
+        else { packet.info = `${srcPort} → ${dstPort} [${fs.join(', ')}]`; }
+        return packet;
+    }
+    function parseUDP(buffer, offset, packet, srcIP, dstIP) {
+        const view = new DataView(buffer);
+        if (buffer.byteLength < offset + 8) throw new Error('Truncated UDP header');
+        const srcPort = view.getUint16(offset, false); const dstPort = view.getUint16(offset+2, false); const length = view.getUint16(offset+4, false);
+        packet.layers.udp = { sourcePort: srcPort, destinationPort: dstPort, length }; packet.protocol = 'UDP'; packet.source = `${srcIP}:${srcPort}`; packet.destination = `${dstIP}:${dstPort}`;
+        if (srcPort===53||dstPort===53) return parseDNS(buffer, offset+8, packet);
+        else if ((srcPort===67||srcPort===68)&&(dstPort===67||dstPort===68)) return parseDHCP(buffer, offset+8, packet);
+        else { packet.info = `${srcPort} → ${dstPort} Len=${length}`; }
+        return packet;
+    }
+    function parseDNS(buffer, offset, packet) {
+        const view = new DataView(buffer);
+        if (buffer.byteLength < offset + 12) { packet.protocol = 'DNS'; packet.info = 'Truncated DNS'; return packet; }
+        const flags = view.getUint16(offset+2, false); const questions = view.getUint16(offset+4, false); const answerRRs = view.getUint16(offset+6, false);
+        const qr = (flags & 0x8000) >>> 15; const rcode = flags & 0x000F;
+        packet.layers.dns = { transactionId: `0x${view.getUint16(offset, false).toString(16)}`, isResponse: qr===1, responseCode: rcode, questions, answers: answerRRs };
+        packet.protocol = 'DNS';
+        if (qr===0) packet.info = `Query (${questions} question${questions!==1?'s':''})`;
+        else { const rc = ['No error','Format error','Server failure','Name error']; packet.info = `Response (${rc[rcode]||`Code ${rcode}`}, ${answerRRs} answer${answerRRs!==1?'s':''})`; }
+        return packet;
+    }
+    function parseDHCP(buffer, offset, packet) {
+        const view = new DataView(buffer);
+        if (buffer.byteLength < offset + 240) { packet.protocol = 'DHCP'; packet.info = 'Truncated DHCP'; return packet; }
+        let optOffset = offset + 240, messageType = 0, foundOption125 = false;
+        while (optOffset < buffer.byteLength - 2) { const ot = view.getUint8(optOffset); if(ot===255) break; if(ot===0){optOffset++;continue;} const ol = view.getUint8(optOffset+1); if(ot===53&&ol===1) messageType=view.getUint8(optOffset+2); if(ot===125) foundOption125=true; optOffset+=2+ol; }
+        const mt = {1:'Discover',2:'Offer',3:'Request',4:'Decline',5:'ACK',6:'NAK',7:'Release',8:'Inform'};
+        packet.layers.dhcp = { operation: view.getUint8(offset)===1?'Request':'Reply', transactionId: `0x${view.getUint32(offset+4,false).toString(16)}`, messageType: mt[messageType]||'Unknown', option125: foundOption125 };
+        packet.protocol = 'DHCP'; packet.info = `${mt[messageType]||'Unknown'}${foundOption125?' - Opt 125':''}`;
+        return packet;
+    }
+    function parseICMP(buffer, offset, packet, srcIP, dstIP) {
+        const view = new DataView(buffer);
+        if (buffer.byteLength < offset + 8) throw new Error('Truncated ICMP header');
+        const type = view.getUint8(offset); const code = view.getUint8(offset+1);
+        const it = {0:'Echo Reply',3:'Destination Unreachable',8:'Echo Request',11:'Time Exceeded'};
+        packet.layers.icmp = { type, code, typeName: it[type]||`Type ${type}` }; packet.protocol = 'ICMP'; packet.source = srcIP; packet.destination = dstIP; packet.info = it[type]||`Type ${type}, Code ${code}`;
+        return packet;
+    }
+    function parseARP(buffer, offset, packet) {
+        const view = new DataView(buffer);
+        if (buffer.byteLength < offset + 28) throw new Error('Truncated ARP packet');
+        const oper = view.getUint16(offset+6, false);
+        const sha = formatMAC(buffer, offset+8); const spa = readIPv4(view, offset+14); const tha = formatMAC(buffer, offset+18); const tpa = readIPv4(view, offset+24);
+        packet.layers.arp = { operation: oper===1?'Request':'Reply', senderMAC: sha, senderIP: spa, targetMAC: tha, targetIP: tpa };
+        packet.protocol = 'ARP'; packet.source = sha; packet.destination = tha;
+        if (oper===1) packet.info = `Who has ${tpa}? Tell ${spa}`; else packet.info = `${spa} is at ${sha}`;
+        return packet;
+    }
+    function parsePPPoE(buffer, offset, packet, stage) {
+        const view = new DataView(buffer);
+        if (buffer.byteLength < offset + 6) throw new Error('Truncated PPPoE header');
+        const code = view.getUint8(offset+1); const sessionId = view.getUint16(offset+2, false);
+        packet.layers.pppoe = { version: (view.getUint8(offset)&0xF0)>>4, type: view.getUint8(offset)&0x0F, code, sessionId, stage };
+        const cn = {0x00:'Session Data',0x09:'PADI',0x07:'PADO',0x19:'PADR',0x65:'PADS',0xa7:'PADT'};
+        packet.protocol = 'PPPoE'; packet.info = `${cn[code]||`Code 0x${code.toString(16)}`} - Session ${sessionId}`;
+        return packet;
+    }
+    function formatMAC(buffer, offset) { try { const b = new Uint8Array(buffer, offset, 6); return Array.from(b).map(v=>v.toString(16).padStart(2,'0')).join(':'); } catch{ return '00:00:00:00:00:00'; } }
+    function readIPv4(view, offset) { return [view.getUint8(offset),view.getUint8(offset+1),view.getUint8(offset+2),view.getUint8(offset+3)].join('.'); }
+    function calculatePCAPStatistics(packets, filename, duration) {
+        const s = { filename, totalPackets: packets.length, duration: duration?duration.toFixed(2)+'s':'N/A', avgRate: duration>0?(packets.length/duration).toFixed(1)+' pkt/s':'N/A', protocols: {}, vlanIds: new Set(), pppoe: {padi:0,pado:0,padr:0,pads:0,padt:0,session:0} };
+        packets.forEach(p => { s.protocols[p.protocol]=(s.protocols[p.protocol]||0)+1; if(p.layers.vlan) s.vlanIds.add(p.layers.vlan.id); if(p.protocol==='PPPoE'&&p.layers.pppoe){const c=p.layers.pppoe.code;if(c===0x09)s.pppoe.padi++;else if(c===0x07)s.pppoe.pado++;else if(c===0x19)s.pppoe.padr++;else if(c===0x65)s.pppoe.pads++;else if(c===0xa7)s.pppoe.padt++;else if(c===0x00)s.pppoe.session++;} });
+        s.vlanIds = Array.from(s.vlanIds).sort((a,b)=>a-b); return s;
+    }
+
+    // Endpoint tracking & security detection (preserved from original)
+    function trackEndpoint(packet) {
+        const mr = /^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$/;
+        if(packet.source&&mr.test(packet.source)) updateMACEndpoint(packet.source,'sent',packet.length);
+        if(packet.destination&&mr.test(packet.destination)) updateMACEndpoint(packet.destination,'recv',packet.length);
+        if(packet.layers?.ip){if(packet.layers.ip.source)updateIPEndpoint(packet.layers.ip.source,'sent',packet.length,packet.protocol);if(packet.layers.ip.destination)updateIPEndpoint(packet.layers.ip.destination,'recv',packet.length,packet.protocol);}
+        detectRogueDevices(packet);
+    }
+    function updateIPEndpoint(ip,dir,bytes,proto){if(!ipEndpoints.has(ip))ipEndpoints.set(ip,{address:ip,sent:0,recv:0,sentBytes:0,recvBytes:0,protocols:new Set()});const e=ipEndpoints.get(ip);if(dir==='sent'){e.sent++;e.sentBytes+=bytes;}else{e.recv++;e.recvBytes+=bytes;}e.protocols.add(proto);}
+    function updateMACEndpoint(mac,dir,bytes){if(!macEndpoints.has(mac))macEndpoints.set(mac,{address:mac,sent:0,recv:0,sentBytes:0,recvBytes:0,protocols:new Set()});const e=macEndpoints.get(mac);if(dir==='sent'){e.sent++;e.sentBytes+=bytes;}else{e.recv++;e.recvBytes+=bytes;}}
+    function detectRogueDevices(packet) {
+        if(packet.protocol==='DHCP'&&packet.info&&packet.info.includes('Offer')){const sip=packet.layers?.ip?.source;let sm='';if(packet.layers?.ethernet)sm=packet.layers.ethernet.source;else if(packet.layers?.sll?.sourceAddress)sm=packet.layers.sll.sourceAddress;if(sip&&sm){const ig=sip.endsWith('.1')||sip.endsWith('.254')||sip.endsWith('.2')||sip.endsWith('.253');const ip=sip.startsWith('192.168.')||sip.startsWith('10.')||(sip.startsWith('172.')&&parseInt(sip.split('.')[1])>=16&&parseInt(sip.split('.')[1])<=31);if((!ig&&ip)||!ip){if(!rogueDevices.find(r=>r.mac===sm&&r.type==='dhcp'))rogueDevices.push({type:'dhcp',mac:sm,ip:sip,description:'Potential rogue DHCP server detected',severity:'high'});}}}
+    }
+    function findLegitimateGatewayMACFromPackets(){const gp=[/\.1$/,/\.254$/,/\.2$/,/\.253$/];for(const p of allPackets){if(p.protocol==='DHCP'&&p.info&&p.info.includes('Offer')){const s=p.layers?.ip?.source;if(s&&gp.some(g=>g.test(s))){if(p.layers?.ethernet?.source)return p.layers.ethernet.source;if(p.layers?.sll?.sourceAddress)return p.layers.sll.sourceAddress;}}}const mc={};for(const p of allPackets){if(p.protocol==='ARP'&&p.layers?.arp?.operation==='Reply'){const s=p.layers.arp.senderIP,m=p.layers.arp.senderMAC;if(gp.some(g=>g.test(s))&&m)mc[m]=(mc[m]||0)+1;}}if(Object.keys(mc).length>0)return Object.entries(mc).sort((a,b)=>b[1]-a[1])[0][0];if(macEndpoints.size>0){const s=Array.from(macEndpoints.entries()).sort((a,b)=>(b[1].sent+b[1].recv)-(a[1].sent+a[1].recv));if(s.length>0)return s[0][0];}return null;}
+    function detectARPSpoofingFromPackets(){legitimateGatewayMAC=findLegitimateGatewayMACFromPackets();const ar=new Map(),rs=new Map();for(const p of allPackets){if(p.protocol==='ARP'&&p.layers?.arp){const a=p.layers.arp,m=a.senderMAC,s=a.senderIP;if(a.operation==='Reply'){ar.set(m,(ar.get(m)||0)+1);if(legitimateGatewayMAC&&(s.endsWith('.1')||s.endsWith('.254')||s.endsWith('.2'))&&m.toLowerCase()!==legitimateGatewayMAC.toLowerCase()&&!rogueDevices.find(r=>r.mac===m&&r.type==='arp_spoof'))rogueDevices.push({type:'arp_spoof',mac:m,ip:s,spoofedIP:s,legitimateMAC:legitimateGatewayMAC,description:`ARP Spoofing - ${m} claiming to be gateway ${s}`,severity:'critical',details:`MITM Attack! Real MAC: ${legitimateGatewayMAC}`});if(!rs.has(m))rs.set(m,new Set());rs.get(m).add(s);}}}const captureDuration=allPackets.length>1?(allPackets[allPackets.length-1].absTimestamp-allPackets[0].absTimestamp):1;const captureMins=Math.max(captureDuration/60,1);for(const[m,c]of ar.entries()){const ratePerMin=c/captureMins;if(ratePerMin>60&&!rogueDevices.find(r=>r.mac===m&&(r.type==='arp_flood'||r.type==='arp_scan'))){let di='Unknown';for(const p of allPackets){if(p.protocol==='ARP'&&p.layers?.arp?.senderMAC===m){di=p.layers.arp.senderIP;break;}}rogueDevices.push({type:'arp_flood',mac:m,ip:di,description:`ARP Flooding - ${c} replies (${ratePerMin.toFixed(0)}/min)`,severity:ratePerMin>120?'critical':'high',details:`High ARP rate from ${m} (${di}): ${ratePerMin.toFixed(1)} replies/min`});}}for(const[m,ips]of rs.entries()){if(ips.size>=3&&!(legitimateGatewayMAC&&m.toLowerCase()===legitimateGatewayMAC.toLowerCase())&&!rogueDevices.find(r=>r.mac===m&&r.type==='arp_scan'))rogueDevices.push({type:'arp_scan',mac:m,ip:Array.from(ips)[0]||'Unknown',description:`ARP Scan - ${ips.size} different IPs claimed`,severity:'medium',details:`Device ${m} claiming: ${Array.from(ips).join(', ')}`});}renderRogueDevices();}
+
+    // ============================================
+    // PCAP FINDINGS ANALYSIS (preserved from original)
+    // ============================================
+    function summarizePacket(p){return `${p.protocol} ${p.source} → ${p.destination} ${truncate(p.info||'',70)}`;}
+    function pushUniqueLimited(l,v,m){if(v===undefined||v===null)return;if(!l.includes(v)&&l.length<m)l.push(v);}
+    function analyzePCAPFindings(packets, stats) {
+        const findings=[],byIP=new Map(),flows=new Map(),dnsTxn=new Map(),dnsNxByResponder=new Map(),dnsUnansweredByClient=new Map(),dhcpByClient=new Map(),arpGatewayReq=new Map(),icmpHard=new Map(),pppoePacketNos=[];
+        const maxNo=PCAP_FINDING_THRESHOLDS.MAX_PACKET_NOS,maxEx=PCAP_FINDING_THRESHOLDS.MAX_EXAMPLES;
+        const ensureIP=(ip)=>{if(!ip)return null;if(!byIP.has(ip))byIP.set(ip,{sentPkts:0,recvPkts:0,sentBytes:0,recvBytes:0,protocols:new Set(),ports:new Set(),syn:0,synAck:0,rst:0,fin:0,icmpUnreach:0,dnsNx:0,dhcp:{discover:0,request:0,nak:0},arpReq:0,arpRep:0,exampleNos:[]});return byIP.get(ip);};
+        packets.forEach(packet=>{const ipL=packet.layers?.ip||packet.layers?.ipv6||null;const srcIP=ipL?.source||'';const dstIP=ipL?.destination||'';const src=ensureIP(srcIP);const dst=ensureIP(dstIP);if(src){src.sentPkts++;src.sentBytes+=packet.length||0;src.protocols.add(packet.protocol);pushUniqueLimited(src.exampleNos,packet.no,maxNo);}if(dst){dst.recvPkts++;dst.recvBytes+=packet.length||0;dst.protocols.add(packet.protocol);pushUniqueLimited(dst.exampleNos,packet.no,maxNo);}if(packet.protocol==='PPPoE')pushUniqueLimited(pppoePacketNos,packet.no,maxNo);if(packet.layers?.tcp&&srcIP&&dstIP){const tcp=packet.layers.tcp,sp=tcp.sourcePort||'',dp=tcp.destinationPort||'';if(src)src.ports.add(sp);if(dst)dst.ports.add(dp);const key=`${srcIP}:${sp}->${dstIP}:${dp}`;if(!flows.has(key))flows.set(key,{syn:0,synAck:0,rst:0,fin:0,lastSynTime:null,dupSyn:0,packetNos:[],srcIP,dstIP,srcPort:sp,dstPort:dp});const f=flows.get(key);pushUniqueLimited(f.packetNos,packet.no,maxNo);const fl=tcp.flags||{};if(fl.syn&&!fl.ack){f.syn++;if(src)src.syn++;const now=packet.absTimestamp||0;if(f.lastSynTime!==null&&(now-f.lastSynTime)<=PCAP_FINDING_THRESHOLDS.TCP_DUP_SYN_WINDOW_SEC)f.dupSyn++;f.lastSynTime=now;}if(fl.syn&&fl.ack){f.synAck++;if(src)src.synAck++;}if(fl.rst){f.rst++;if(src)src.rst++;}if(fl.fin){f.fin++;if(src)src.fin++;}}if(packet.protocol==='DNS'&&packet.layers?.dns){const dns=packet.layers.dns,tx=dns.transactionId||'';const key=`${tx}|${srcIP}|${dstIP}`,rev=`${tx}|${dstIP}|${srcIP}`;if(dns.isResponse){const p=dnsTxn.get(rev);if(p){p.responded=true;p.responseNo=packet.no;}if(String(dns.responseCode)==='3'||dns.responseCode===3){const rk=srcIP||'unknown';if(!dnsNxByResponder.has(rk))dnsNxByResponder.set(rk,{count:0,packetNos:[],examples:[],client:dstIP});const r=dnsNxByResponder.get(rk);r.count++;pushUniqueLimited(r.packetNos,packet.no,maxNo);if(r.examples.length<maxEx)r.examples.push({no:packet.no,summary:summarizePacket(packet)});}}else if(tx){dnsTxn.set(key,{queryNo:packet.no,queryTime:packet.absTimestamp||0,responded:false,responseNo:null,client:srcIP,server:dstIP,packet});}}if(packet.protocol==='DHCP'&&packet.layers?.dhcp){const t=(packet.layers.dhcp.messageType||'').toLowerCase();const srcMAC=packet.layers?.ethernet?.source||packet.layers?.sll?.sourceAddress||'';const key=srcMAC||srcIP||'unknown';if(!dhcpByClient.has(key))dhcpByClient.set(key,{discover:0,request:0,nak:0,packetNos:[],ip:srcIP,mac:srcMAC,examples:[]});const r=dhcpByClient.get(key);if(t==='discover')r.discover++;if(t==='request')r.request++;if(t==='nak')r.nak++;pushUniqueLimited(r.packetNos,packet.no,maxNo);if(r.examples.length<maxEx)r.examples.push({no:packet.no,summary:summarizePacket(packet)});}if(packet.protocol==='ARP'&&packet.layers?.arp){const a=packet.layers.arp;if(a.operation==='Request'){if(src)src.arpReq++;const t=a.targetIP||'';if(t.endsWith('.1')||t.endsWith('.254')){if(!arpGatewayReq.has(t))arpGatewayReq.set(t,{count:0,packetNos:[],requester:a.senderIP||srcIP,examples:[]});const r=arpGatewayReq.get(t);r.count++;pushUniqueLimited(r.packetNos,packet.no,maxNo);if(r.examples.length<maxEx)r.examples.push({no:packet.no,summary:summarizePacket(packet)});}}if(a.operation==='Reply'&&src)src.arpRep++;}if(packet.protocol==='ICMP'&&packet.layers?.icmp){const tn=packet.layers.icmp.typeName||'';if(tn==='Destination Unreachable'||tn==='Time Exceeded'){const key=`${srcIP}->${dstIP}|${tn}`;if(!icmpHard.has(key))icmpHard.set(key,{count:0,packetNos:[],examples:[],srcIP,dstIP,type:tn});const r=icmpHard.get(key);r.count++;pushUniqueLimited(r.packetNos,packet.no,maxNo);if(r.examples.length<maxEx)r.examples.push({no:packet.no,summary:summarizePacket(packet)});}}});
+        const packetByNo=new Map(packets.map(p=>[p.no,p]));const timeOf=(no)=>{const p=packetByNo.get(no);return p?`${parseFloat(p.timestamp||0).toFixed(6)}s`:'N/A';};
+        for(const[ip,rec]of byIP.entries()){const r1=rec.sentPkts/Math.max(rec.recvPkts,1),r2=rec.recvPkts/Math.max(rec.sentPkts,1);if(r1>=PCAP_FINDING_THRESHOLDS.ONE_WAY_RATIO_THRESHOLD||r2>=PCAP_FINDING_THRESHOLDS.ONE_WAY_RATIO_THRESHOLD)findings.push({id:`capture-oneway-${ip}`,category:'Capture',severity:r1>100||r2>100?'medium':'low',title:'Capture looks one-directional',impact:'Traffic is heavily one-way.',affected:[{ip}],evidence:{count:rec.sentPkts+rec.recvPkts,firstSeen:timeOf(rec.exampleNos[0]),lastSeen:timeOf(rec.exampleNos[rec.exampleNos.length-1]),packetNos:rec.exampleNos,examples:rec.exampleNos.slice(0,maxEx).map(no=>({no,summary:summarizePacket(packetByNo.get(no)||{protocol:'N/A',source:'',destination:'',info:''})}))},actions:{filterText:ip,protocol:''}});}
+        for(const f of flows.values()){const rk=`${f.dstIP}:${f.dstPort}->${f.srcIP}:${f.srcPort}`;const rev=flows.get(rk);const sa=(rev?rev.synAck:0)+f.synAck;if(f.syn>=PCAP_FINDING_THRESHOLDS.TCP_FAILED_HANDSHAKE_SYN&&sa===0)findings.push({id:`tcp-handshake-${f.srcIP}-${f.srcPort}-${f.dstIP}-${f.dstPort}`,category:'TCP',severity:'high',title:'Connection attempts not completing',impact:'Clients may experience timeouts.',affected:[{ip:f.srcIP},{ip:f.dstIP,port:f.dstPort}],evidence:{count:f.syn,firstSeen:timeOf(f.packetNos[0]),lastSeen:timeOf(f.packetNos[f.packetNos.length-1]),examples:f.packetNos.slice(0,maxEx).map(no=>({no,summary:summarizePacket(packetByNo.get(no)||{protocol:'N/A',source:'',destination:'',info:''})}))},actions:{filterText:`${f.dstIP} SYN`,protocol:'TCP'}});if(f.rst>=PCAP_FINDING_THRESHOLDS.TCP_RST_THRESHOLD)findings.push({id:`tcp-rst-${f.srcIP}-${f.dstIP}`,category:'TCP',severity:'high',title:'Excessive TCP resets',impact:'Sessions may disconnect.',affected:[{ip:f.srcIP},{ip:f.dstIP}],evidence:{count:f.rst,firstSeen:timeOf(f.packetNos[0]),lastSeen:timeOf(f.packetNos[f.packetNos.length-1]),examples:f.packetNos.slice(0,maxEx).map(no=>({no,summary:summarizePacket(packetByNo.get(no)||{protocol:'N/A',source:'',destination:'',info:''})}))},actions:{filterText:`${f.srcIP} RST`,protocol:'TCP'}});}
+        for(const[r,rec]of dnsNxByResponder.entries()){if(rec.count>=PCAP_FINDING_THRESHOLDS.DNS_NXDOMAIN_THRESHOLD)findings.push({id:`dns-nxdomain-${r}`,category:'DNS',severity:'medium',title:'High NXDOMAIN rate',impact:'Slow page/app loads.',affected:[{ip:r},{ip:rec.client}],evidence:{count:rec.count,firstSeen:timeOf(rec.packetNos[0]),lastSeen:timeOf(rec.packetNos[rec.packetNos.length-1]),examples:rec.examples},actions:{filterText:r||'DNS',protocol:'DNS'}});}
+        for(const tx of dnsTxn.values()){if(!tx.responded){const k=tx.client||'unknown';if(!dnsUnansweredByClient.has(k))dnsUnansweredByClient.set(k,{count:0,packetNos:[],examples:[],server:tx.server});const r=dnsUnansweredByClient.get(k);r.count++;pushUniqueLimited(r.packetNos,tx.queryNo,maxNo);if(r.examples.length<maxEx)r.examples.push({no:tx.queryNo,summary:summarizePacket(tx.packet)});}}
+        for(const[c,r]of dnsUnansweredByClient.entries()){if(r.count>=PCAP_FINDING_THRESHOLDS.DNS_UNANSWERED_THRESHOLD)findings.push({id:`dns-unanswered-${c}`,category:'DNS',severity:'high',title:'Many DNS queries with no responses',impact:'Broad browsing/app timeouts.',affected:[{ip:c},{ip:r.server}],evidence:{count:r.count,firstSeen:timeOf(r.packetNos[0]),lastSeen:timeOf(r.packetNos[r.packetNos.length-1]),examples:r.examples},actions:{filterText:c,protocol:'DNS'}});}
+        for(const r of dhcpByClient.values()){const ch=r.discover+r.request;if(ch>=PCAP_FINDING_THRESHOLDS.DHCP_BURST_THRESHOLD||r.nak>0)findings.push({id:`dhcp-churn-${r.mac||r.ip}`,category:'DHCP',severity:r.nak>0?'high':'medium',title:'Repeated DHCP requests',impact:'Devices may lose connectivity.',affected:[{ip:r.ip,mac:r.mac}],evidence:{count:ch+r.nak,firstSeen:timeOf(r.packetNos[0]),lastSeen:timeOf(r.packetNos[r.packetNos.length-1]),examples:r.examples},actions:{filterText:`DHCP ${r.ip||r.mac||''}`.trim(),protocol:'DHCP'}});}
+        rogueDevices.forEach((d,i)=>{const mn=packets.filter(p=>(d.ip&&`${p.source} ${p.destination}`.includes(d.ip))||(d.mac&&`${p.source} ${p.destination}`.includes(d.mac))).slice(0,maxNo).map(p=>p.no);findings.push({id:`security-rogue-${i}-${d.type}`,category:'Security',severity:d.severity==='critical'?'high':'medium',title:d.description,impact:'Potential rogue infrastructure.',affected:[{ip:d.ip,mac:d.mac}],evidence:{count:mn.length,firstSeen:timeOf(mn[0]),lastSeen:timeOf(mn[mn.length-1]),examples:mn.slice(0,maxEx).map(no=>({no,summary:summarizePacket(packetByNo.get(no)||{protocol:'N/A',source:'',destination:'',info:''})}))},actions:{filterText:d.ip||d.mac||'ARP',protocol:d.type==='dns'?'DNS':'ARP'}});});
+        for(const[g,r]of arpGatewayReq.entries()){if(r.count>=PCAP_FINDING_THRESHOLDS.ARP_GATEWAY_REQUEST_THRESHOLD)findings.push({id:`arp-gateway-${g}`,category:'ARP',severity:'medium',title:'Gateway ARP request burst',impact:'Gateway instability.',affected:[{ip:g},{ip:r.requester}],evidence:{count:r.count,firstSeen:timeOf(r.packetNos[0]),lastSeen:timeOf(r.packetNos[r.packetNos.length-1]),examples:r.examples},actions:{filterText:g,protocol:'ARP'}});}
+        if(stats?.pppoe){const pp=stats.pppoe;if(pp.padi>=PCAP_FINDING_THRESHOLDS.PPPOE_PADI_THRESHOLD&&pp.pads===0)findings.push({id:'pppoe-padi-no-pads',category:'PPPoE',severity:'high',title:'PPPoE discovery failing',impact:'Internet loss.',affected:[{note:'WAN PPPoE'}],evidence:{count:pp.padi,firstSeen:timeOf(pppoePacketNos[0]),lastSeen:timeOf(pppoePacketNos[pppoePacketNos.length-1]),examples:pppoePacketNos.slice(0,maxEx).map(no=>({no,summary:summarizePacket(packetByNo.get(no)||{protocol:'N/A',source:'',destination:'',info:''})}))},actions:{filterText:'PPPoE PADI',protocol:'PPPoE'}});if(pp.padt>=PCAP_FINDING_THRESHOLDS.PPPOE_PADT_THRESHOLD)findings.push({id:'pppoe-padt-seen',category:'PPPoE',severity:pp.padt>3?'high':'medium',title:'PPPoE session terminated (PADT)',impact:'Internet interruptions.',affected:[{note:'WAN PPPoE'}],evidence:{count:pp.padt,firstSeen:timeOf(pppoePacketNos[0]),lastSeen:timeOf(pppoePacketNos[pppoePacketNos.length-1]),examples:pppoePacketNos.slice(0,maxEx).map(no=>({no,summary:summarizePacket(packetByNo.get(no)||{protocol:'N/A',source:'',destination:'',info:''})}))},actions:{filterText:'PPPoE PADT',protocol:'PPPoE'}});}
+        for(const[k,r]of icmpHard.entries()){if(r.count>=3)findings.push({id:`icmp-hard-${k}`,category:'Capture',severity:r.count>10?'high':'medium',title:`ICMP: ${r.type}`,impact:'Routing/MTU issues.',affected:[{ip:r.srcIP},{ip:r.dstIP}],evidence:{count:r.count,firstSeen:timeOf(r.packetNos[0]),lastSeen:timeOf(r.packetNos[r.packetNos.length-1]),examples:r.examples},actions:{filterText:`ICMP ${r.dstIP}`.trim(),protocol:'ICMP'}});}
+        findings.sort((a,b)=>({high:3,medium:2,low:1}[b.severity]-{high:3,medium:2,low:1}[a.severity])||((b.evidence?.count||0)-(a.evidence?.count||0)));
+        const hf=findings.filter(f=>f.severity==='high');const summary=hf.reduce((a,f)=>{a.total++;a[f.severity]=(a[f.severity]||0)+1;return a;},{total:0,high:0,medium:0,low:0});return{findings:hf,summary};
+    }
+
+    // ============================================
+    // PCAP DISPLAY
+    // ============================================
+    function populateProtocolFilter(){const s=document.getElementById('protocolFilter');const p=[...new Set(allPackets.map(p=>p.protocol))].sort();s.innerHTML='<option value="">All Protocols</option>';p.forEach(pr=>{if(!pr)return;const o=document.createElement('option');o.value=pr;o.textContent=pr;s.appendChild(o);});}
+    function renderPacketTable(){const tb=document.getElementById('packetTableBody');tb.innerHTML='';const lim=parseInt(document.getElementById('displayLimit').value);let pts;if(lim===0){pts=filteredPackets;pcapWindowStart=0;}else{if(pcapWindowStart>=filteredPackets.length)pcapWindowStart=Math.max(0,filteredPackets.length-lim);if(pcapWindowStart<0)pcapWindowStart=0;pts=filteredPackets.slice(pcapWindowStart,pcapWindowStart+lim);}pts.forEach(p=>{const r=document.createElement('tr');r.dataset.pktNo=p.no;r.onclick=()=>{document.querySelectorAll('#packetTableBody tr.selected').forEach(t=>t.classList.remove('selected'));r.classList.add('selected');selectedItem=p;displayPacketDetails(p);};r.innerHTML=`<td class="text-muted">${p.no}</td><td class="text-muted">${formatTimeForDisplay(p.timestamp,p.absTimestamp)}</td><td>${p.source}</td><td>${p.destination}</td><td class="protocol protocol-${p.protocol.toLowerCase()}">${p.protocol}</td><td class="text-muted">${p.length}</td><td>${p.info}</td>`;tb.appendChild(r);});const wl=document.getElementById('pcapWindowLabel');if(lim>0&&filteredPackets.length>lim){const end=Math.min(pcapWindowStart+lim,filteredPackets.length);wl.textContent=`${(pcapWindowStart+1).toLocaleString()}-${end.toLocaleString()}`;wl.style.display='';}else{wl.textContent='';wl.style.display='none';}document.getElementById('packetCount').textContent=`${filteredPackets.length.toLocaleString()} packets`;}
+    function movePcapWindow(dir){const lim=parseInt(document.getElementById('displayLimit').value);if(lim===0)return;const step=Math.max(Math.floor(lim*0.8),100);pcapWindowStart+=dir*step;if(pcapWindowStart<0)pcapWindowStart=0;if(pcapWindowStart>=filteredPackets.length)pcapWindowStart=Math.max(0,filteredPackets.length-lim);renderPacketTable();document.querySelector('#pcapViewer .packet-list').scrollTop=0;}
+    function selectPacket(p){selectedItem=p;document.querySelectorAll('#packetTableBody tr.selected').forEach(t=>t.classList.remove('selected'));const row=document.querySelector(`#packetTableBody tr[data-pkt-no="${p.no}"]`);if(row)row.classList.add('selected');displayPacketDetails(p);}
+    function displayPacketDetails(packet){const c=document.getElementById('packetDetailsContent');let h=`<div class="layer-section"><div class="layer-title">Frame ${packet.no}</div><div class="detail-row"><span class="detail-label">Length</span><span class="detail-value">${packet.length} bytes</span></div><div class="detail-row"><span class="detail-label">Relative Time</span><span class="detail-value">${packet.timestamp} s</span></div><div class="detail-row"><span class="detail-label">Absolute Time</span><span class="detail-value">${new Date(packet.absTimestamp*1000).toISOString()}</span></div><div class="detail-row"><span class="detail-label">Protocol</span><span class="detail-value protocol-${packet.protocol.toLowerCase()}">${packet.protocol}</span></div></div>`;if(packet.protocol==='TCP'||packet.layers?.tcp)h+=`<div style="margin:15px 0;"><button class="action-btn" style="width:100%;" onclick="followTCPStream(${packet.no})">&#128279; Follow TCP Stream</button></div>`;for(const l in packet.layers){h+=`<div class="layer-section"><div class="layer-title">${l.toUpperCase()}</div>`;const ld=packet.layers[l];for(const f in ld){if(typeof ld[f]==='object'){h+=`<div class="layer-field">${f}:</div>`;for(const sf in ld[f])h+=`<div class="layer-field" style="margin-left:15px;">${sf}: <span>${ld[f][sf]}</span></div>`;}else h+=`<div class="layer-field">${f}: <span>${ld[f]}</span></div>`;}h+=`</div>`;}if(packet.rawData&&packet.rawData.byteLength>0){const mx=hexDumpExpanded?packet.rawData.byteLength:128;h+=`<div class="layer-section"><div class="layer-title">Hex Dump (${packet.rawData.byteLength} bytes)</div><div class="hex-dump">${generateHexDump(packet.rawData,mx)}</div>${packet.rawData.byteLength>128?`<button class="hex-expand-btn" onclick="toggleHexDump(${packet.no})">${hexDumpExpanded?'Show Less':'Show All'}</button>`:''}</div>`;}c.innerHTML=h;}
+    function generateHexDump(buffer,maxBytes){const b=new Uint8Array(buffer);const l=Math.min(b.length,maxBytes);let d='';for(let i=0;i<l;i+=16){const o=i.toString(16).padStart(4,'0');const hx=[],as=[];for(let j=0;j<16&&i+j<l;j++){const by=b[i+j];hx.push(by.toString(16).padStart(2,'0'));as.push(by>=32&&by<127?String.fromCharCode(by):'.');}d+=`${o}  ${hx.join(' ').padEnd(47,' ')}  ${as.join('')}\n`;}if(b.length>maxBytes&&maxBytes<b.length)d+=`\n... (${b.length-maxBytes} more bytes)`;return d;}
+    function updatePCAPStatistics(){document.getElementById('pcapStats').innerHTML=`<div class="stats-grid"><div class="stat-card"><div class="stat-label">Total Packets</div><div class="stat-value">${stats.totalPackets?.toLocaleString()||0}</div></div><div class="stat-card"><div class="stat-label">Duration</div><div class="stat-value">${stats.duration||'N/A'}</div></div><div class="stat-card"><div class="stat-label">Avg Rate</div><div class="stat-value">${stats.avgRate||'N/A'}</div></div></div><div class="protocol-list"><h4 style="color:var(--text-secondary);font-size:11px;margin:15px 0 10px;">PROTOCOLS</h4>${stats.protocols?Object.entries(stats.protocols).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([p,c])=>`<div class="protocol-item"><span class="protocol protocol-${p.toLowerCase()}">${p}</span><span>${c.toLocaleString()} (${((c/stats.totalPackets)*100).toFixed(1)}%)</span></div>`).join(''):'<p class="text-muted">No data</p>'}</div>`;}
+    function renderEndpoints(){const il=Array.from(ipEndpoints.values()).sort((a,b)=>(b.sent+b.recv)-(a.sent+a.recv)).slice(0,15);document.getElementById('ipEndpoints').innerHTML=il.length?`<table class="endpoint-table"><thead><tr><th>Address</th><th>Packets</th><th>Bytes</th></tr></thead><tbody>${il.map(e=>`<tr onclick="filterByIP('${e.address}')"><td class="endpoint-address">${e.address}</td><td>${(e.sent+e.recv).toLocaleString()}</td><td>${formatBytes(e.sentBytes+e.recvBytes)}</td></tr>`).join('')}</tbody></table>`:'<p class="text-muted">No IP endpoints</p>';const ml=Array.from(macEndpoints.values()).sort((a,b)=>(b.sent+b.recv)-(a.sent+a.recv)).slice(0,15);document.getElementById('macEndpoints').innerHTML=ml.length?`<table class="endpoint-table"><thead><tr><th>Address</th><th>Packets</th><th>Bytes</th></tr></thead><tbody>${ml.map(e=>`<tr onclick="filterByMAC('${e.address}')"><td class="endpoint-address">${e.address}</td><td>${(e.sent+e.recv).toLocaleString()}</td><td>${formatBytes(e.sentBytes+e.recvBytes)}</td></tr>`).join('')}</tbody></table>`:'<p class="text-muted">No MAC endpoints</p>';renderRogueDevices();}
+    function renderRogueDevices(){const c=document.getElementById('rogueDevicesContent');if(!rogueDevices.length){c.innerHTML='<p class="security-ok">&#9989; No suspicious devices detected</p>';return;}c.innerHTML=rogueDevices.map(d=>{const cr=d.severity==='critical';return`<div class="${cr?'security-warning-critical':'security-warning'}"><div class="${cr?'warning-title-critical':'warning-title'}">&#9888;&#65039; ${d.description}</div><div class="warning-details">${d.mac?`<strong>MAC:</strong> ${d.mac}<br>`:''}${d.ip?`<strong>IP:</strong> ${d.ip}<br>`:''}${d.legitimateMAC?`<strong>Legit Gateway MAC:</strong> ${d.legitimateMAC}<br>`:''}<strong>Severity:</strong> ${d.severity.toUpperCase()}</div></div>`;}).join('');}
+    function filterByIP(ip){document.getElementById('packetFilter').value=ip;applyPCAPFilters();switchSidebarTab('details');}
+    function filterByMAC(mac){document.getElementById('packetFilter').value=mac;applyPCAPFilters();switchSidebarTab('details');}
+    function parseTimeFilter(val,isEnd){if(!val||!val.trim())return null;const v=val.trim();const parts=v.split(':');if(parts.length<2)return null;const h=parseInt(parts[0])||0,m=parseInt(parts[1])||0;if(parts.length===2){if(isEnd)return h*3600+(m+1)*60-0.001;return h*3600+m*60;}const s=parseFloat(parts[2])||0;return h*3600+m*60+s;}
+    function getPacketTimeOfDay(p){if(!p.absTimestamp)return null;const d=new Date(p.absTimestamp*1000);return d.getHours()*3600+d.getMinutes()*60+d.getSeconds()+d.getMilliseconds()/1000;}
+    function applyPCAPFilters(){const ft=document.getElementById('packetFilter').value.toLowerCase().trim();const pf=document.getElementById('protocolFilter').value;const tfrom=parseTimeFilter(document.getElementById('pcapTimeFrom').value,false);const tto=parseTimeFilter(document.getElementById('pcapTimeTo').value,true);filteredPackets=allPackets.filter(p=>{if(pf&&p.protocol!==pf)return false;if(tfrom!==null||tto!==null){const tod=getPacketTimeOfDay(p);if(tod===null)return false;if(tfrom!==null&&tod<tfrom)return false;if(tto!==null&&tod>tto)return false;}if(ft){const si=`${p.protocol} ${p.source} ${p.destination} ${p.info}`.toLowerCase();return si.includes(ft);}return true;});pcapWindowStart=0;renderPacketTable();}
+    function clearPCAPFilters(){document.getElementById('packetFilter').value='';document.getElementById('protocolFilter').value='';document.getElementById('pcapTimeFrom').value='';document.getElementById('pcapTimeTo').value='';pcapWindowStart=0;filteredPackets=allPackets;renderPacketTable();}
+    function formatTimeForDisplay(ts,abs){if(timeDisplayFormat==='absolute'){if(!abs)return ts;const d=new Date(abs*1000);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}.${String(Math.floor((abs%1)*1000)).padStart(3,'0')}`;}return parseFloat(ts).toFixed(6);}
+    function setTimeFormat(f){timeDisplayFormat=f;document.querySelectorAll('.time-btn').forEach(b=>b.classList.toggle('active',b.textContent.toLowerCase()===f));renderPacketTable();}
+    function switchSidebarTab(tab){document.querySelectorAll('[data-pcap-tab]').forEach(t=>t.classList.toggle('active',t.dataset.pcapTab===tab));document.querySelectorAll('[data-pcap-panel]').forEach(p=>p.classList.toggle('active',p.dataset.pcapPanel===tab));}
+    function formatBytes(b){if(b<1024)return b+' B';if(b<1024*1024)return(b/1024).toFixed(1)+' KB';return(b/(1024*1024)).toFixed(2)+' MB';}
+    function toggleHexDump(no){hexDumpExpanded=!hexDumpExpanded;const p=allPackets.find(pk=>pk.no===no);if(p)displayPacketDetails(p);}
+    function truncate(s,l){if(!s)return'';return s.length>l?s.substring(0,l)+'...':s;}
+    function escapeHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+    // TCP Stream
+    function followTCPStream(no){const p=allPackets.find(pk=>pk.no===no);if(!p||!p.layers?.tcp){alert('No TCP data');return;}const tcp=p.layers.tcp,ip=p.layers.ip;if(!ip){alert('No IP');return;}const sk=createStreamKey(ip.source,tcp.sourcePort,ip.destination,tcp.destinationPort);let s=tcpStreams.get(sk);if(!s){s=buildTCPStream(sk);tcpStreams.set(sk,s);}displayTCPStream(s);}
+    function createStreamKey(sIP,sP,dIP,dP){const a1=`${sIP}:${sP}`,a2=`${dIP}:${dP}`;return a1<a2?`${a1}-${a2}`:`${a2}-${a1}`;}
+    function buildTCPStream(sk){const[a1,a2]=sk.split('-');const s={key:sk,client:a1,server:a2,packets:[],segments:[],totalBytes:0,isHTTP:false,isHTTPS:false};allPackets.forEach(p=>{if(!p.layers?.tcp||!p.layers?.ip)return;const ps=`${p.layers.ip.source}:${p.layers.tcp.sourcePort}`,pd=`${p.layers.ip.destination}:${p.layers.tcp.destinationPort}`;if((ps===a1&&pd===a2)||(ps===a2&&pd===a1)){s.packets.push(p);if(p.layers.tcp.sourcePort===80||p.layers.tcp.destinationPort===80)s.isHTTP=true;if(p.layers.tcp.sourcePort===443||p.layers.tcp.destinationPort===443)s.isHTTPS=true;if(p.rawData){s.segments.push({seqNum:parseInt(p.layers.tcp.sequenceNumber),direction:ps===a1?'C→S':'S→C',data:p.rawData,packetNo:p.no});s.totalBytes+=p.rawData.byteLength;}}});s.segments.sort((a,b)=>a.seqNum-b.seqNum);return s;}
+    function displayTCPStream(s){document.getElementById('streamInfo').innerHTML=`<div><strong>Stream:</strong> <span>${s.client}</span> ↔ <span>${s.server}</span></div><div><strong>Packets:</strong> <span>${s.packets.length}</span></div><div><strong>Total Bytes:</strong> <span>${s.totalBytes.toLocaleString()}</span></div><div><strong>Protocol:</strong> <span style="color:${s.isHTTPS?'var(--proto-https)':s.isHTTP?'var(--green)':'var(--text-primary)'};">${s.isHTTPS?'HTTPS (Encrypted)':s.isHTTP?'HTTP':'TCP'}</span></div>`;let dv='';if(s.isHTTPS)dv=`Encrypted HTTPS connection (${s.packets.length} packets, ${s.totalBytes.toLocaleString()} bytes)`;else if(s.isHTTP){dv='';s.segments.forEach(seg=>{const b=new Uint8Array(seg.data);let t='';for(let i=0;i<Math.min(b.length,1500);i++){const by=b[i];if(by>=32&&by<127)t+=String.fromCharCode(by);else if(by===10)t+='\n';else if(by!==13)t+='.';}if(t.includes('HTTP/')||t.includes('GET ')||t.includes('POST '))dv+=`\n===== [${seg.direction}] Packet ${seg.packetNo} =====\n${t}\n`;});dv=dv||'No readable HTTP data';}else{dv='TCP Stream (Hex):\n';s.segments.forEach(seg=>{dv+=`\n[${seg.direction}] Packet ${seg.packetNo}:\n${generateHexDump(seg.data,seg.data.byteLength)}\n`;});}document.getElementById('streamData').textContent=dv;document.getElementById('tcpStreamModal').classList.add('show');window.currentStream=s;}
+    function closeStreamModal(){document.getElementById('tcpStreamModal').classList.remove('show');}
+    function exportTCPStream(){if(!window.currentStream)return;const s=window.currentStream;let c=`TCP Stream Export\nStream: ${s.client} <-> ${s.server}\nPackets: ${s.packets.length}\n${'='.repeat(80)}\n\n`;if(s.isHTTPS)c+='ENCRYPTED';else s.segments.forEach(seg=>{c+=`\n[${seg.direction}] Packet ${seg.packetNo}:\n${generateHexDump(seg.data,seg.data.byteLength)}\n`;});const bl=new Blob([c],{type:'text/plain'});const u=URL.createObjectURL(bl);const a=document.createElement('a');a.href=u;a.download=`tcp_stream_${s.key.replace(/[:.]/g,'_')}.txt`;a.click();URL.revokeObjectURL(u);}
+
+    // ============================================
+    // EVENT LOG PARSING (preserved from original)
+    // ============================================
+    async function analyzeEventLog(text, filename) {
+        updateProgress(5, 'Parsing event log...');
+        allEvents = [];
+        const lines = text.split('\n');
+        if (lines.length > 0 && lines[0].charCodeAt(0) === 0xFEFF) lines[0] = lines[0].substring(1);
+        const firstLine = lines[0].trim();
+        let format = 'unknown';
+        if (firstLine.includes('\t') && firstLine.includes('Date')) format = 'tab';
+        else if (firstLine.includes('Date') && firstLine.includes('Time') && firstLine.includes('Details')) format = 'csv';
+        for (let i = 1; i < lines.length; i++) {
+            if (i % 100 === 0) { updateProgress(5 + (i/lines.length)*90, `Line ${i}/${lines.length}...`); await new Promise(r=>setTimeout(r,0)); }
+            const line = lines[i].trim(); if (!line) continue;
+            let event = null;
+            if (format === 'csv') event = parseCSVEvent(line, i);
+            else if (format === 'tab') event = parseTabEvent(line, i);
+            if (event) allEvents.push(event);
+        }
+        updateProgress(95, 'Analyzing patterns...');
+        currentEventStats = analyzeEventPatterns(allEvents, filename);
+        updateProgress(100, `Complete! ${allEvents.length.toLocaleString()} events`);
+        filteredEvents = allEvents;
+        populateEventFilters(currentEventStats.categories, currentEventStats.severities);
+        renderEventTable();
+        updateEventPatterns(currentEventStats);
+    }
+    function parseCSVEvent(line, num) { const f=[]; let c='',q=false; for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"')q=!q;else if(ch===','&&!q){f.push(c.trim());c='';}else c+=ch;}f.push(c.trim()); if(f.length<4)return null; return{no:num,date:f[0],time:f[1],details:f[2]||'',category:f[3]||'Unknown',severity:f[4]||'Info',raw:line}; }
+    function parseTabEvent(line, num) { const f=line.split('\t').map(s=>s.trim()).filter(s=>s.length>0); if(f.length<5)return null; return{no:num,date:f[0],time:f[1],category:f[2]||'Unknown',severity:f[3]||'Info',details:f[4]||'',raw:line}; }
+    function parseEventTimestamp(ds,ts){if(!ds||!ts)return null;const ct=(ts||'').split(' ')[0].replace(',','.');const[hh='0',mm='0',sp='0']=ct.split(':');const[sr='0',mr='0']=sp.split('.');const s=parseInt(sr,10)||0,ms=parseInt((mr+'000').slice(0,3),10)||0;const dmy=ds.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);if(dmy)return new Date(parseInt(dmy[3],10),parseInt(dmy[2],10)-1,parseInt(dmy[1],10),parseInt(hh,10)||0,parseInt(mm,10)||0,s,ms).getTime();const ymd=ds.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);if(ymd)return new Date(parseInt(ymd[1],10),parseInt(ymd[2],10)-1,parseInt(ymd[3],10),parseInt(hh,10)||0,parseInt(mm,10)||0,s,ms).getTime();const fb=new Date(`${ds} ${ct}`);return Number.isNaN(fb.getTime())?null:fb.getTime();}
+    function pushSample(list,event,max=5){if(list.length<max)list.push({no:event.no,details:truncate(event.details,140)});}
+    // analyzeEventPatterns — preserved from original (large function)
+    function analyzeEventPatterns(events, filename) {
+        const DT={WIFI_FLAP_THRESHOLD:20,WIFI_RAPID_SWITCH_SECONDS:10,DHCP_NOISE_THRESHOLD:30,ETH_LINK_FLAP_THRESHOLD:1,ETH_LOW_SPEEDS:[10,100],PPPOE_FAIL_THRESHOLD:1,MAX_FINDING_EXAMPLES:5};
+        const patterns={filename,totalEvents:events.length,timeRange:{first:null,last:null},categories:{},severities:{},macAddresses:new Set(),wifiEvents:{deauth:[],disassoc:[],assoc:[],auth:[]},pppoeEvents:{padi:[],connectionFailures:[]},findings:[]};
+        const macRegex=/([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})/g,wifiRegex=/(\S+):\s+AP-STA-(CONNECTED|DISCONNECTED)\s+([0-9a-f:]{17})/i,dhcpReqRegex=/DHCPREQUEST\([^)]+\)\s+(\d+\.\d+\.\d+\.\d+)\s+([0-9a-f:]{17})/i,dhcpAckRegex=/DHCPACK\([^)]+\)\s+(\d+\.\d+\.\d+\.\d+)\s+([0-9a-f:]{17})\s*(\S+)?/i,ethLinkRegex=/^(eth\d+).*Link (DOWN|Up)/i,ethSpeedRegex=/Link Up at\s+(\d+)\s+mbps/i;
+        const macIndex=new Map(),ipIndex=new Map(),ifaceIndex=new Map(),rapidSwitchByMac=new Map(),pppoeSummary={signals:0,failures:0,reconnectLoops:0,samples:[]};
+        function ensureMac(mac){const k=(mac||'').toUpperCase();if(!k)return null;if(!macIndex.has(k))macIndex.set(k,{mac:k,ips:new Set(),hostnames:new Set(),wifi:{connected:0,disconnected:0,deauth:0,disassoc:0,handshake:0,interfaces:new Set(),lastState:null,samples:[]},dhcp:{request:0,ack:0,samples:[]},pppoe:{events:0,failures:0},severityEvents:[],samples:[]});return macIndex.get(k);}
+        function ensureIp(ip){if(!ip)return null;if(!ipIndex.has(ip))ipIndex.set(ip,{ip,macs:new Set(),hostnames:new Set(),dhcpRequest:0,dhcpAck:0,samples:[]});return ipIndex.get(ip);}
+        events.forEach((event,idx)=>{if(idx===0)patterns.timeRange.first=`${event.date} ${event.time}`;if(idx===events.length-1)patterns.timeRange.last=`${event.date} ${event.time}`;const details=event.details||'',lower=details.toLowerCase(),eventTs=parseEventTimestamp(event.date,event.time);patterns.categories[event.category]=(patterns.categories[event.category]||0)+1;patterns.severities[event.severity]=(patterns.severities[event.severity]||0)+1;const macs=(details.match(macRegex)||[]).map(m=>m.toUpperCase()),ips=details.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g)||[];macs.forEach(mac=>{patterns.macAddresses.add(mac);pushSample(ensureMac(mac).samples,event,DT.MAX_FINDING_EXAMPLES);});ips.forEach(ip=>{const ir=ensureIp(ip);pushSample(ir.samples,event,DT.MAX_FINDING_EXAMPLES);macs.forEach(mac=>ir.macs.add(mac));});if(details.includes('DEAUTH'))patterns.wifiEvents.deauth.push({time:event.time,details});if(details.includes('DISASSOC'))patterns.wifiEvents.disassoc.push({time:event.time,details});const wm=details.match(wifiRegex);if(wm){const iface=wm[1],state=wm[2].toUpperCase(),mac=wm[3].toUpperCase(),rec=ensureMac(mac);rec.wifi.interfaces.add(iface);if(state==='CONNECTED')rec.wifi.connected++;if(state==='DISCONNECTED')rec.wifi.disconnected++;pushSample(rec.wifi.samples,event,DT.MAX_FINDING_EXAMPLES);if(rec.wifi.lastState&&rec.wifi.lastState.iface!==iface&&rec.wifi.lastState.ts!==null&&eventTs!==null){const ds=Math.abs(eventTs-rec.wifi.lastState.ts)/1000;if(ds<=DT.WIFI_RAPID_SWITCH_SECONDS){const rapid=rapidSwitchByMac.get(mac)||{count:0,interfaces:new Set(),samples:[]};rapid.count++;rapid.interfaces.add(rec.wifi.lastState.iface);rapid.interfaces.add(iface);pushSample(rapid.samples,event,DT.MAX_FINDING_EXAMPLES);rapidSwitchByMac.set(mac,rapid);}}rec.wifi.lastState={state,iface,ts:eventTs};}if(lower.includes('wpa: pairwise key handshake completed'))macs.forEach(mac=>ensureMac(mac).wifi.handshake++);const rm=details.match(dhcpReqRegex);if(rm){const ip=rm[1],mac=rm[2].toUpperCase(),rec=ensureMac(mac);rec.dhcp.request++;rec.ips.add(ip);pushSample(rec.dhcp.samples,event,DT.MAX_FINDING_EXAMPLES);const ir=ensureIp(ip);ir.dhcpRequest++;ir.macs.add(mac);}const am=details.match(dhcpAckRegex);if(am){const ip=am[1],mac=am[2].toUpperCase(),hn=am[3]||'',rec=ensureMac(mac);rec.dhcp.ack++;rec.ips.add(ip);if(hn)rec.hostnames.add(hn);pushSample(rec.dhcp.samples,event,DT.MAX_FINDING_EXAMPLES);const ir=ensureIp(ip);ir.dhcpAck++;ir.macs.add(mac);if(hn)ir.hostnames.add(hn);}const em=details.match(ethLinkRegex);if(em){const iface=em[1].toLowerCase(),state=em[2].toLowerCase();if(!ifaceIndex.has(iface))ifaceIndex.set(iface,{interfaceName:iface,linkDownCount:0,linkUpCount:0,speeds:[],samples:[]});const ir=ifaceIndex.get(iface);if(state==='down')ir.linkDownCount++;if(state==='up')ir.linkUpCount++;const sm=details.match(ethSpeedRegex);if(sm)ir.speeds.push(parseInt(sm[1],10));pushSample(ir.samples,event,DT.MAX_FINDING_EXAMPLES);}const isFD=lower.includes('drop')&&lower.includes('in=pppoe-wan');const ps=/\bPADI\b|\bPADO\b|\bPADR\b|\bPADS\b|\bPADT\b/i.test(details)||(lower.includes('pppoe-wan')&&lower.includes('session'));const pf=(/\bLCP\b/i.test(details)&&/(down|terminated|timeout)/i.test(details))||(/\b(CHAP|PAP)\b/i.test(details)&&/(failed|failure)/i.test(details))||(lower.includes('pppoe-wan')&&/(disconnected|reconnect|link down)/i.test(details))||/\bPADT\b/i.test(details);if(ps&&!isFD){pppoeSummary.signals++;pushSample(pppoeSummary.samples,event,DT.MAX_FINDING_EXAMPLES);}if(pf&&!isFD){pppoeSummary.failures++;if(lower.includes('reconnect'))pppoeSummary.reconnectLoops++;}const sev=(event.severity||'').toLowerCase();if(sev.includes('critical')||sev.includes('error')){macs.forEach(mac=>ensureMac(mac).severityEvents.push(event));}});
+        patterns.macAddresses=Array.from(patterns.macAddresses);
+        for(const rec of macIndex.values()){const tw=rec.wifi.connected+rec.wifi.disconnected;if(tw>=DT.WIFI_FLAP_THRESHOLD*2||rec.wifi.disconnected>=DT.WIFI_FLAP_THRESHOLD)patterns.findings.push({id:`wifi-flap-${rec.mac}`,title:'Wi-Fi client repeatedly disconnecting',severity:rec.wifi.disconnected>DT.WIFI_FLAP_THRESHOLD*2?'high':'medium',category:'WiFi',affected:[{mac:rec.mac,ip:Array.from(rec.ips)[0]||'',iface:Array.from(rec.wifi.interfaces).join('/')}],impact:'Intermittent Wi-Fi drops.',evidence:{count:tw,firstSeen:patterns.timeRange.first,lastSeen:patterns.timeRange.last,examples:rec.wifi.samples},filterKeys:{mac:[rec.mac],ip:Array.from(rec.ips),keywords:['AP-STA','DISCONNECTED'],iface:Array.from(rec.wifi.interfaces)}});const dt=rec.dhcp.request+rec.dhcp.ack;if(dt>=DT.DHCP_NOISE_THRESHOLD)patterns.findings.push({id:`dhcp-noise-${rec.mac}`,title:'DHCP churn for client',severity:dt>DT.DHCP_NOISE_THRESHOLD*2?'high':'medium',category:'DHCP',affected:[{mac:rec.mac,ip:Array.from(rec.ips)[0]||''}],impact:'Frequent lease renewals.',evidence:{count:dt,firstSeen:patterns.timeRange.first,lastSeen:patterns.timeRange.last,examples:rec.dhcp.samples},filterKeys:{mac:[rec.mac],ip:Array.from(rec.ips),keywords:['DHCPREQUEST','DHCPACK'],iface:[]}});}
+        for(const[mac,rapid]of rapidSwitchByMac.entries()){const rec=macIndex.get(mac);patterns.findings.push({id:`wifi-switch-${mac}`,title:'Client roaming/band-switching frequently',severity:rapid.count>5?'high':'medium',category:'WiFi',affected:[{mac,ip:rec?Array.from(rec.ips)[0]||'':'',iface:Array.from(rapid.interfaces).join('/')}],impact:'Aggressive roaming.',evidence:{count:rapid.count,firstSeen:patterns.timeRange.first,lastSeen:patterns.timeRange.last,examples:rapid.samples},filterKeys:{mac:[mac],ip:rec?Array.from(rec.ips):[],keywords:['AP-STA-CONNECTED','AP-STA-DISCONNECTED'],iface:Array.from(rapid.interfaces)}});}
+        for(const ir of ifaceIndex.values()){const ls=ir.speeds.filter(s=>DT.ETH_LOW_SPEEDS.includes(s));if(ir.linkDownCount>=DT.ETH_LINK_FLAP_THRESHOLD)patterns.findings.push({id:`eth-link-${ir.interfaceName}`,title:`Ethernet instability on ${ir.interfaceName}`,severity:ir.linkDownCount>3||ls.length>0?'high':'medium',category:'Ethernet',affected:[{iface:ir.interfaceName}],impact:'Link flaps cause outages.',evidence:{count:ir.linkDownCount+ir.linkUpCount,firstSeen:patterns.timeRange.first,lastSeen:patterns.timeRange.last,examples:ir.samples},filterKeys:{mac:[],ip:[],keywords:['Link DOWN','Link Up'],iface:[ir.interfaceName]}});}
+        if(pppoeSummary.failures>=DT.PPPOE_FAIL_THRESHOLD)patterns.findings.push({id:'pppoe-instability',title:'PPPoE session instability',severity:'high',category:'PPPoE',affected:[{iface:'pppoe-wan'}],impact:'Internet drops for all clients.',evidence:{count:pppoeSummary.failures,firstSeen:patterns.timeRange.first,lastSeen:patterns.timeRange.last,examples:pppoeSummary.samples},filterKeys:{mac:[],ip:[],keywords:['PADI','PADO','PADR','PADS','PADT','LCP','pppoe-wan'],iface:['pppoe-wan']}});
+        for(const rec of macIndex.values()){if(rec.severityEvents.length>0)patterns.findings.push({id:`severity-impact-${rec.mac}`,title:'Critical/error event for device',severity:'medium',category:'System',affected:[{mac:rec.mac,ip:Array.from(rec.ips)[0]||''}],impact:'High-severity event affecting device.',evidence:{count:rec.severityEvents.length,firstSeen:`${rec.severityEvents[0].date} ${rec.severityEvents[0].time}`,lastSeen:`${rec.severityEvents[rec.severityEvents.length-1].date} ${rec.severityEvents[rec.severityEvents.length-1].time}`,examples:rec.severityEvents.slice(0,DT.MAX_FINDING_EXAMPLES).map(e=>({no:e.no,details:truncate(e.details,140)}))},filterKeys:{mac:[rec.mac],ip:Array.from(rec.ips),keywords:['error','critical'],iface:[]}});}
+        patterns.findings.sort((a,b)=>({high:3,medium:2,low:1}[b.severity]-{high:3,medium:2,low:1}[a.severity])||((b.evidence?.count||0)-(a.evidence?.count||0)));
+        patterns.findings=patterns.findings.filter(f=>f.severity==='high');
+        return patterns;
+    }
+
+    // ============================================
+    // EVENT LOG DISPLAY
+    // ============================================
+    function renderEventTable(){const tb=document.getElementById('eventTableBody');tb.innerHTML='';const lim=parseInt(document.getElementById('eventDisplayLimit').value);let es;if(lim===0){es=filteredEvents;eventWindowStart=0;}else{if(eventWindowStart>=filteredEvents.length)eventWindowStart=Math.max(0,filteredEvents.length-lim);if(eventWindowStart<0)eventWindowStart=0;es=filteredEvents.slice(eventWindowStart,eventWindowStart+lim);}es.forEach(e=>{const r=document.createElement('tr');r.onclick=function(){selectedItem=e;document.querySelectorAll('#eventTableBody tr').forEach(t=>t.classList.remove('selected'));this.classList.add('selected');displayEventDetails(e);};r.innerHTML=`<td class="text-muted">${e.no}</td><td class="text-muted">${escapeHtml(e.date)}<br><small>${escapeHtml(e.time)}</small></td><td>${escapeHtml(e.category)}</td><td class="protocol-${e.severity.toLowerCase()}">${escapeHtml(e.severity)}</td><td class="truncate" title="${escapeHtml(e.details)}">${escapeHtml(truncate(e.details,80))}</td>`;tb.appendChild(r);});const wl=document.getElementById('eventWindowLabel');if(lim>0&&filteredEvents.length>lim){const end=Math.min(eventWindowStart+lim,filteredEvents.length);wl.textContent=`${(eventWindowStart+1).toLocaleString()}-${end.toLocaleString()}`;wl.style.display='';}else{wl.textContent='';wl.style.display='none';}document.getElementById('eventCount').textContent=`${filteredEvents.length.toLocaleString()} events`;}
+    function moveEventWindow(dir){const lim=parseInt(document.getElementById('eventDisplayLimit').value);if(lim===0)return;const step=Math.max(Math.floor(lim*0.8),100);eventWindowStart+=dir*step;if(eventWindowStart<0)eventWindowStart=0;if(eventWindowStart>=filteredEvents.length)eventWindowStart=Math.max(0,filteredEvents.length-lim);renderEventTable();document.querySelector('#eventViewer .packet-list').scrollTop=0;}
+    function displayEventDetails(e){document.getElementById('eventDetailsContent').innerHTML=`<div class="layer-section"><div class="layer-title">Event #${e.no}</div><div class="detail-row"><span class="detail-label">Date/Time</span><span class="detail-value">${escapeHtml(e.date)} ${escapeHtml(e.time)}</span></div><div class="detail-row"><span class="detail-label">Category</span><span class="detail-value">${escapeHtml(e.category)}</span></div><div class="detail-row"><span class="detail-label">Severity</span><span class="detail-value protocol-${e.severity.toLowerCase()}">${escapeHtml(e.severity)}</span></div></div><div class="layer-section"><div class="layer-title">Details</div><div style="color:var(--text-primary);font-size:12px;line-height:1.5;white-space:pre-wrap;">${escapeHtml(e.details)}</div></div>`;}
+    function updateEventPatterns(st){const findings=st.findings||[];const sc=findings.reduce((a,f)=>{a[f.severity]=(a[f.severity]||0)+1;return a;},{high:0,medium:0,low:0});document.getElementById('eventPatterns').innerHTML=`<div class="stats-grid"><div class="stat-card"><div class="stat-label">Total Events</div><div class="stat-value">${st.totalEvents.toLocaleString()}</div></div><div class="stat-card"><div class="stat-label">Findings</div><div class="stat-value">${findings.length}</div><div class="text-muted" style="font-size:10px;margin-top:6px;">H:${sc.high||0} M:${sc.medium||0} L:${sc.low||0}</div></div></div><div class="protocol-list"><h4 style="color:var(--text-secondary);font-size:11px;margin:15px 0 10px;">CATEGORIES</h4>${Object.entries(st.categories).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`<div class="protocol-item"><span>${c}</span><span>${n.toLocaleString()}</span></div>`).join('')}</div>${st.wifiEvents.deauth.length>0?`<div class="protocol-list"><h4 style="color:var(--text-secondary);font-size:11px;margin:15px 0 10px;">WIFI EVENTS</h4><div class="protocol-item"><span>DEAUTH</span><span>${st.wifiEvents.deauth.length}</span></div></div>`:''}`;}
+    function populateEventFilters(cats,sevs){const cs=document.getElementById('categoryFilter');cs.innerHTML='<option value="">All Categories</option>';Object.keys(cats).sort().forEach(c=>cs.innerHTML+=`<option value="${c}">${c}</option>`);const ss=document.getElementById('severityFilter');ss.innerHTML='<option value="">All Severities</option>';Object.keys(sevs).sort().forEach(s=>ss.innerHTML+=`<option value="${s}">${s}</option>`);}
+    function switchEventSidebarTab(tab){document.querySelectorAll('[data-event-tab]').forEach(t=>t.classList.toggle('active',t.dataset.eventTab===tab));document.querySelectorAll('[data-event-panel]').forEach(p=>p.classList.toggle('active',p.dataset.eventPanel===tab));}
+    function parseEventTime(timeStr,isEnd){if(!timeStr)return null;const parts=timeStr.trim().split(':');if(parts.length<2)return null;const h=parseInt(parts[0])||0,m=parseInt(parts[1])||0;if(parts.length===2){if(isEnd)return h*3600+(m+1)*60-0.001;return h*3600+m*60;}const s=parseFloat(parts[2])||0;return h*3600+m*60+s;}
+    function getEventTimeOfDay(ev){if(!ev.time)return null;const clean=ev.time.split(' ')[0].replace(',','.');const parts=clean.split(':');if(parts.length<2)return null;const h=parseInt(parts[0])||0,m=parseInt(parts[1])||0,s=parseFloat(parts[2])||0;return h*3600+m*60+s;}
+    function applyEventFilters(){const ft=document.getElementById('eventFilter').value.toLowerCase().trim();const cf=document.getElementById('categoryFilter').value;const sf=document.getElementById('severityFilter').value;const efrom=parseEventTime(document.getElementById('eventTimeFrom').value,false);const eto=parseEventTime(document.getElementById('eventTimeTo').value,true);const terms=ft?ft.split(/\s+/).filter(Boolean):[];filteredEvents=allEvents.filter(e=>{if(cf&&e.category!==cf)return false;if(sf&&e.severity!==sf)return false;if(efrom!==null||eto!==null){const tod=getEventTimeOfDay(e);if(tod===null)return false;if(efrom!==null&&tod<efrom)return false;if(eto!==null&&tod>eto)return false;} if(terms.length>0){const si=`${e.details} ${e.category} ${e.severity} ${e.raw||''}`.toLowerCase();if(activeFindingFilter){const keys=activeFindingFilter;const fterms=[];['mac','ip','iface','keywords'].forEach(k=>(keys[k]||[]).forEach(v=>{const n=(v||'').toString().trim().toLowerCase();if(n&&!fterms.includes(n))fterms.push(n);}));if(fterms.length>0&&!fterms.some(t=>si.includes(t)))return false;return terms.some(t=>si.includes(t));}return terms.every(t=>si.includes(t));}if(activeFindingFilter){const si=`${e.details} ${e.category} ${e.severity} ${e.raw||''}`.toLowerCase();const keys=activeFindingFilter;const fterms=[];['mac','ip','iface','keywords'].forEach(k=>(keys[k]||[]).forEach(v=>{const n=(v||'').toString().trim().toLowerCase();if(n&&!fterms.includes(n))fterms.push(n);}));if(fterms.length>0&&!fterms.some(t=>si.includes(t)))return false;}return true;});renderEventTable();}
+    function clearEventFilters(){activeFindingFilter=null;document.getElementById('eventFilter').value='';document.getElementById('categoryFilter').value='';document.getElementById('severityFilter').value='';document.getElementById('eventTimeFrom').value='';document.getElementById('eventTimeTo').value='';eventWindowStart=0;filteredEvents=allEvents;renderEventTable();}
+    function applyFindingFilter(findingId){if(!currentEventStats?.findings)return;const f=currentEventStats.findings.find(i=>i.id===findingId);if(!f)return;activeFindingFilter=f.filterKeys||{};const terms=[];['mac','ip','iface','keywords'].forEach(k=>(activeFindingFilter[k]||[]).forEach(v=>{if(v&&!terms.includes(v))terms.push(v);}));document.getElementById('eventFilter').value=terms.join(' ');applyEventFilters();switchViewerTab('event');}
+    function applyPCAPFindingAction(findingId){const f=pcapFindings.find(i=>i.id===findingId);if(!f)return;document.getElementById('packetFilter').value=f.actions?.filterText||'';document.getElementById('protocolFilter').value=f.actions?.protocol||'';applyPCAPFilters();switchViewerTab('pcap');}
+
+    // ============================================
+    // COMBINED FINDINGS (NEW)
+    // ============================================
+    function renderCombinedFindings() {
+        const container = document.getElementById('combinedFindingsContent');
+        const pFindings = pcapFindings || [];
+        const eFindings = (currentEventStats && currentEventStats.findings) || [];
+        
+        if (pFindings.length === 0 && eFindings.length === 0) {
+            container.innerHTML = '<p class="text-muted" style="text-align:center;padding:40px;">No findings detected yet. Load files to analyze.</p>';
+            updateViewerTabs();
+            return;
+        }
+
+        let html = '';
+
+        // Cross-reference shared entities
+        if (pcapLoaded && eventLoaded && pFindings.length > 0 && eFindings.length > 0) {
+            const pcapEntities = new Set();
+            pFindings.forEach(f => (f.affected || []).forEach(a => { if(a.ip) pcapEntities.add(a.ip); if(a.mac) pcapEntities.add(a.mac?.toUpperCase()); }));
+            const eventEntities = new Set();
+            eFindings.forEach(f => (f.affected || []).forEach(a => { if(a.ip) eventEntities.add(a.ip); if(a.mac) eventEntities.add(a.mac?.toUpperCase()); }));
+            const shared = [...pcapEntities].filter(x => eventEntities.has(x));
+            if (shared.length > 0) {
+                html += `<div class="findings-section" style="margin:0 0 20px;border-color:rgba(0,212,255,0.5);">
+                    <div class="findings-title"><strong>&#128279; Cross-Referenced (${shared.length} shared entities)</strong><span class="finding-source-tag cross-ref">PCAP + EVENT</span></div>
+                    <p style="color:var(--text-secondary);font-size:12px;margin-bottom:8px;">These IPs/MACs appear in both PCAP and event log findings.</p>
+                    <div class="findings-list">${shared.map(entity => {
+                        const pc = pFindings.filter(f => (f.affected||[]).some(a => a.ip===entity||a.mac?.toUpperCase()===entity));
+                        const ev = eFindings.filter(f => (f.affected||[]).some(a => a.ip===entity||a.mac?.toUpperCase()===entity));
+                        if (!pc.length || !ev.length) return '';
+                        return `<article class="finding-card cross-ref-card"><div class="cross-ref-header"><strong>${entity}</strong> — ${pc.length} PCAP + ${ev.length} event finding${ev.length>1?'s':''}</div>
+                            ${pc.map(f => `<div style="padding:4px 0;"><span class="finding-source-tag pcap-source">PCAP</span> ${f.title} <button class="finding-btn" style="margin-left:6px;" onclick="applyPCAPFindingAction('${f.id}')">Filter</button></div>`).join('')}
+                            ${ev.map(f => `<div style="padding:4px 0;"><span class="finding-source-tag event-source">EVENT</span> ${f.title} <button class="finding-btn" style="margin-left:6px;" onclick="applyFindingFilter('${f.id}')">Filter</button></div>`).join('')}
+                        </article>`;
+                    }).join('')}</div></div>`;
+            }
+        }
+
+        // PCAP findings — grouped by category
+        if (pFindings.length > 0) {
+            const grouped = new Map();
+            pFindings.forEach(f => {
+                const key = f.title.replace(/\s*\(.*?\)\s*/g, '').trim();
+                if (!grouped.has(key)) grouped.set(key, { title: key, category: f.category, severity: f.severity, findings: [] });
+                grouped.get(key).findings.push(f);
+            });
+            html += `<div class="findings-section" style="margin:0 0 20px;">
+                <div class="findings-title"><strong>&#128300; PCAP Findings (${pFindings.length} total, ${grouped.size} patterns)</strong><span class="finding-source-tag pcap-source">PCAP</span></div>
+                <div class="findings-list">`;
+            for (const [key, group] of grouped) {
+                const ips = new Set();
+                let totalEvidence = 0;
+                group.findings.forEach(f => {
+                    (f.affected || []).forEach(a => { if(a.ip && a.ip !== '127.0.0.1') ips.add(a.ip); });
+                    totalEvidence += f.evidence?.count || 0;
+                });
+                const ipList = [...ips].slice(0, 8);
+                const moreIps = ips.size > 8 ? ` +${ips.size - 8} more` : '';
+                html += `<article class="finding-card">
+                    <div class="finding-header"><div><strong>${key}</strong> <span class="text-muted">(${group.category})</span></div><span class="finding-badge ${group.severity}">${group.severity}</span></div>
+                    <div class="finding-meta">${group.findings.length} occurrence${group.findings.length>1?'s':''} &bull; ${totalEvidence.toLocaleString()} total packets</div>
+                    <div class="finding-impact">Affected IPs: ${ipList.length > 0 ? ipList.join(', ') + moreIps : 'localhost only'}</div>
+                    <div class="finding-actions" style="flex-wrap:wrap;gap:4px;" id="pcap-group-${key.replace(/[^a-zA-Z0-9]/g,'')}">
+                        ${group.findings.slice(0, 5).map(f => {
+                            const label = (f.affected||[]).map(a => a.ip).filter(Boolean).filter(ip => ip !== '127.0.0.1').join('/') || 'localhost';
+                            return `<button class="finding-btn" onclick="applyPCAPFindingAction('${f.id}')">${truncate(label, 20)}</button>`;
+                        }).join('')}
+                        ${group.findings.length > 5 ? `<button class="finding-btn" style="color:var(--cyan);border-color:var(--cyan);" onclick="expandFindingGroup(this,'pcap','${key.replace(/'/g,"\\'")}')">+${group.findings.length - 5} more</button>` : ''}
+                    </div>
+                    <div class="finding-actions" style="flex-wrap:wrap;gap:4px;display:none;margin-top:4px;" id="pcap-group-extra-${key.replace(/[^a-zA-Z0-9]/g,'')}">
+                        ${group.findings.slice(5).map(f => {
+                            const label = (f.affected||[]).map(a => a.ip).filter(Boolean).filter(ip => ip !== '127.0.0.1').join('/') || 'localhost';
+                            return `<button class="finding-btn" onclick="applyPCAPFindingAction('${f.id}')">${truncate(label, 20)}</button>`;
+                        }).join('')}
+                    </div>
+                </article>`;
+            }
+            html += `</div></div>`;
+        }
+
+        // Event findings — grouped by category
+        if (eFindings.length > 0) {
+            const grouped = new Map();
+            eFindings.forEach(f => {
+                const key = f.title;
+                if (!grouped.has(key)) grouped.set(key, { title: key, category: f.category, severity: f.severity, findings: [] });
+                grouped.get(key).findings.push(f);
+            });
+            html += `<div class="findings-section" style="margin:0 0 20px;border-color:rgba(63,185,80,0.35);">
+                <div class="findings-title"><strong>&#128203; Event Log Findings (${eFindings.length} total, ${grouped.size} patterns)</strong><span class="finding-source-tag event-source">EVENT</span></div>
+                <div class="findings-list">`;
+            for (const [key, group] of grouped) {
+                const macs = new Set();
+                group.findings.forEach(f => (f.affected || []).forEach(a => { if(a.mac) macs.add(a.mac); }));
+                html += `<article class="finding-card">
+                    <div class="finding-header"><div><strong>${key}</strong> <span class="text-muted">(${group.category})</span></div><span class="finding-badge ${group.severity}">${group.severity}</span></div>
+                    <div class="finding-meta">${group.findings.length} device${group.findings.length>1?'s':''} affected</div>
+                    <div class="finding-actions" style="flex-wrap:wrap;gap:4px;" id="event-group-${key.replace(/[^a-zA-Z0-9]/g,'')}">
+                        ${group.findings.slice(0, 5).map(f => {
+                            const label = (f.affected||[]).map(a => a.mac || a.ip || a.iface).filter(Boolean)[0] || 'unknown';
+                            return `<button class="finding-btn" onclick="applyFindingFilter('${f.id}')">${truncate(label, 20)}</button>`;
+                        }).join('')}
+                        ${group.findings.length > 5 ? `<button class="finding-btn" style="color:var(--cyan);border-color:var(--cyan);" onclick="expandFindingGroup(this,'event','${key.replace(/'/g,"\\'")}')">+${group.findings.length - 5} more</button>` : ''}
+                    </div>
+                    <div class="finding-actions" style="flex-wrap:wrap;gap:4px;display:none;margin-top:4px;" id="event-group-extra-${key.replace(/[^a-zA-Z0-9]/g,'')}">
+                        ${group.findings.slice(5).map(f => {
+                            const label = (f.affected||[]).map(a => a.mac || a.ip || a.iface).filter(Boolean)[0] || 'unknown';
+                            return `<button class="finding-btn" onclick="applyFindingFilter('${f.id}')">${truncate(label, 20)}</button>`;
+                        }).join('')}
+                    </div>
+                </article>`;
+            }
+            html += `</div></div>`;
+        }
+
+        container.innerHTML = html;
+        updateViewerTabs();
+    }
+
+    function renderSingleFinding(finding, source) {
+        const affectedHtml = (finding.affected || []).map(a => [a.mac, a.ip, a.hostname, a.iface, a.note].filter(Boolean).join(' &bull; ')).join('<br>');
+        const evidenceHtml = finding.evidence ? `<strong>Evidence:</strong> ${finding.evidence.count || 0} ${source==='pcap'?'packets':'events'} &bull; ${finding.evidence.firstSeen||'N/A'} → ${finding.evidence.lastSeen||'N/A'}
+            ${(finding.evidence.examples||[]).map(ex => `<div class="finding-example">#${ex.no}: ${escapeHtml(ex.details || ex.summary || '')}</div>`).join('')}` : '';
+        const actionBtn = source === 'pcap' 
+            ? `<button class="finding-btn" onclick="applyPCAPFindingAction('${finding.id}')">Filter PCAP</button>`
+            : `<button class="finding-btn" onclick="applyFindingFilter('${finding.id}')">Filter Events</button>`;
+        return `<article class="finding-card">
+            <div class="finding-header"><div><strong>${finding.title}</strong> <span class="text-muted">(${finding.category})</span></div><span class="finding-badge ${finding.severity}">${finding.severity}</span></div>
+            ${affectedHtml ? `<div class="finding-meta">${affectedHtml}</div>` : ''}
+            <div class="finding-impact">${finding.impact}</div>
+            ${evidenceHtml ? `<div class="finding-evidence">${evidenceHtml}</div>` : ''}
+            <div class="finding-actions">${actionBtn}</div>
+        </article>`;
+    }
+
+    function findingBadge(sev) { return `<span class="finding-badge ${sev}">${sev}</span>`; }
+
+    // ============================================
+    // TRAFFIC PATTERNS (preserved from original)
+    // ============================================
+    const NORMAL_PATTERNS=[{id:'dns_resolution',icon:'&#127760;',title:'DNS Resolution',shortDesc:'Device looking up domain names',example:'Query: google.com → Response: 142.250.80.46',fullDescription:'Normal DNS resolution: client query to DNS server (port 53 UDP), response with IP address.',healthyPattern:['Single query per domain (with caching)','Response within 10-200ms','Valid NOERROR response code','Reasonable TTL (300-86400s)'],warningPatterns:['Multiple identical queries','Response times over 500ms','Many NXDOMAIN responses','Queries to unusual DNS servers'],examplePackets:[{type:'query',text:'192.168.1.100 → 8.8.8.8 [DNS Query: google.com Type A]'},{type:'response',text:'8.8.8.8 → 192.168.1.100 [DNS Response: 142.250.80.46]',time:'23ms'}]},{id:'tcp_handshake',icon:'&#129309;',title:'TCP Connection',shortDesc:'Normal 3-way handshake',example:'SYN → SYN-ACK → ACK → Data',fullDescription:'TCP 3-way handshake ensures both endpoints are ready.',healthyPattern:['Complete SYN, SYN-ACK, ACK sequence','No RST packets','Clean FIN closure'],warningPatterns:['SYN without SYN-ACK','Immediate RST','SYN retransmissions'],examplePackets:[{type:'syn',text:'[1] 192.168.1.100:54321 → 93.184.216.34:443 [SYN]'},{type:'synack',text:'[2] 93.184.216.34:443 → 192.168.1.100:54321 [SYN-ACK]'},{type:'ack',text:'[3] 192.168.1.100:54321 → 93.184.216.34:443 [ACK]'}]},{id:'https_browsing',icon:'&#128274;',title:'HTTPS Web Traffic',shortDesc:'Secure browsing with TLS',example:'Port 443 • TLS Handshake',fullDescription:'HTTPS uses TCP port 443 with TLS encryption.',healthyPattern:['TCP handshake on port 443','TLS handshake completes','Encrypted data flows','Bidirectional traffic'],warningPatterns:['Port 443 without TLS','Certificate errors','Unusual destination IPs']},{id:'dhcp_join',icon:'&#127968;',title:'DHCP (Device Joining)',shortDesc:'Device requesting IP from router',example:'DORA: Discover → Offer → Request → ACK',fullDescription:'DHCP DORA process assigns IP addresses.',healthyPattern:['All 4 DORA steps','Completion within 1-2s','Valid IP range','Single DHCP server'],warningPatterns:['Discover without Offer','Multiple DHCP servers','Constant renewals'],examplePackets:[{type:'discover',text:'[1] 0.0.0.0 → 255.255.255.255 [DHCP Discover]'},{type:'offer',text:'[2] 192.168.1.1 → 255.255.255.255 [DHCP Offer: 192.168.1.50]'},{type:'request',text:'[3] 0.0.0.0 → 255.255.255.255 [DHCP Request]'},{type:'ack',text:'[4] 192.168.1.1 → 192.168.1.50 [DHCP ACK]'}]},{id:'arp_resolution',icon:'&#128205;',title:'ARP (Local Network)',shortDesc:'Finding MAC for IP on LAN',example:'Who has 192.168.1.1? → MAC: aa:bb:cc:dd:ee:ff',fullDescription:'ARP resolves IP to MAC addresses on LAN.',healthyPattern:['Request followed by reply','1:1 ratio','Same MAC per IP','Minimal gratuitous ARP'],warningPatterns:['Multiple MACs for one IP','Excessive gratuitous ARP','ARP storms'],examplePackets:[{type:'request',text:'Who has 192.168.1.1? Tell 192.168.1.100'},{type:'reply',text:'192.168.1.1 is at aa:bb:cc:dd:ee:ff'}]},{id:'icmp_ping',icon:'&#128225;',title:'ICMP Ping',shortDesc:'Testing connectivity',example:'Echo Request → Echo Reply',fullDescription:'ICMP ping tests connectivity and latency.',healthyPattern:['Request followed by Reply','RTT under 100ms (LAN)','No packet loss','Consistent TTL'],warningPatterns:['No Reply (host down)','Destination Unreachable','Very high latency'],examplePackets:[{type:'request',text:'192.168.1.100 → 8.8.8.8 [Echo Request] TTL=64'},{type:'reply',text:'8.8.8.8 → 192.168.1.100 [Echo Reply] Time=15ms'}]},{id:'multicast_mdns',icon:'&#128226;',title:'Multicast/mDNS',shortDesc:'Device discovery on LAN',example:'Broadcast: _services._dns-sd._udp.local',fullDescription:'mDNS/SSDP for local service discovery.',healthyPattern:['Broadcast to 224.0.0.251','UDP port 5353 or 1900','Periodic (every few min)'],warningPatterns:['Excessive broadcasts (>100/s)','Multicast to external networks']},{id:'background_updates',icon:'&#128260;',title:'Background Updates',shortDesc:'Apps checking for updates',example:'HTTPS to known update servers',fullDescription:'OS and apps regularly check for updates.',healthyPattern:['Known domains (microsoft.com, etc.)','HTTPS port 443','Periodic (hourly/daily)'],warningPatterns:['Constant connections','Unknown domains','Excessive bandwidth']}];
+    let detectedPatterns=new Set();
+    function analyzeTrafficPatterns(){detectedPatterns.clear();if(!allPackets.length)return;const dp=allPackets.filter(p=>p.protocol==='DNS');if(dp.length>0&&dp.some(p=>p.info&&p.info.includes('Response')))detectedPatterns.add('dns_resolution');const tp=allPackets.filter(p=>p.protocol==='TCP');if(tp.some(p=>p.info&&p.info.includes('[SYN]'))&&tp.some(p=>p.info&&p.info.includes('[SYN-ACK]'))&&tp.some(p=>p.info&&p.info.includes('[ACK]')))detectedPatterns.add('tcp_handshake');if(allPackets.some(p=>p.protocol==='HTTPS'))detectedPatterns.add('https_browsing');if(allPackets.some(p=>p.protocol==='DHCP'))detectedPatterns.add('dhcp_join');if(allPackets.some(p=>p.protocol==='ARP'))detectedPatterns.add('arp_resolution');if(allPackets.some(p=>p.protocol==='ICMP'))detectedPatterns.add('icmp_ping');if(allPackets.some(p=>{const d=p.destination||'';return d.startsWith('224.')||d.startsWith('239.')||d==='ff02::fb';}))detectedPatterns.add('multicast_mdns');if(detectedPatterns.has('https_browsing'))detectedPatterns.add('background_updates');}
+    function renderHealthyPatterns(){const c=document.getElementById('healthyPatternsList');if(!c)return;c.innerHTML=NORMAL_PATTERNS.map(p=>{const d=detectedPatterns.has(p.id);return`<div class="pattern-detail-card ${d?'detected':''}" id="pattern-${p.id}"><div class="pattern-detail-header"><div class="pattern-detail-title"><h3>${p.title}</h3><p>${p.shortDesc}</p></div>${d?'<div class="pattern-detected-tag">Found in Your Capture</div>':''}</div><div class="pattern-description">${p.fullDescription}</div><div class="pattern-subsection"><div class="pattern-subsection-title">Healthy Pattern:</div><ul class="pattern-list">${p.healthyPattern.map(i=>'<li>'+i+'</li>').join('')}</ul></div>${p.warningPatterns?`<div class="pattern-subsection"><div class="pattern-subsection-title">Warning Signs:</div><ul class="pattern-list warning-list">${p.warningPatterns.map(i=>'<li>'+i+'</li>').join('')}</ul></div>`:''}${p.examplePackets?`<div class="pattern-subsection"><div class="pattern-subsection-title">Example Packets:</div><div class="pattern-packets-example">${p.examplePackets.map(pk=>`<div class="pattern-packet-line"><span class="pattern-packet-type ${pk.type}">${pk.type}</span><span class="pattern-packet-text">${pk.text}</span>${pk.time?'<span class="pattern-packet-meta">'+pk.time+'</span>':''}</div>`).join('')}</div></div>`:''}</div>`;}).join('');}
+    function renderMetrics(){const c=document.getElementById('metricsGrid');if(!c)return;const metrics=[{title:'DNS Response Time',ranges:[{label:'Excellent',icon:'good',value:'10-50ms'},{label:'Good',icon:'good',value:'50-200ms'},{label:'Slow',icon:'warning',value:'200-500ms'},{label:'Problem',icon:'bad',value:'>500ms'}]},{title:'TCP Retransmissions',ranges:[{label:'Excellent',icon:'good',value:'<0.1%'},{label:'Acceptable',icon:'good',value:'0.1-1%'},{label:'Concerning',icon:'warning',value:'1-3%'},{label:'Problem',icon:'bad',value:'>3%'}]},{title:'DHCP Renewals',ranges:[{label:'Normal',icon:'good',value:'Every 12-24h'},{label:'Frequent',icon:'warning',value:'Every 1-2h'},{label:'Suspicious',icon:'warning',value:'Every few min'},{label:'Problem',icon:'bad',value:'Constant'}]},{title:'ARP Request Rate',ranges:[{label:'Normal',icon:'good',value:'1-2 per IP'},{label:'Elevated',icon:'warning',value:'5-10'},{label:'High',icon:'warning',value:'10-50'},{label:'Problem',icon:'bad',value:'>50'}]},{title:'Ping Latency (LAN)',ranges:[{label:'Excellent',icon:'good',value:'<1ms'},{label:'Good',icon:'good',value:'1-10ms'},{label:'Acceptable',icon:'warning',value:'10-50ms'},{label:'Problem',icon:'bad',value:'>50ms'}]}];c.innerHTML=metrics.map(m=>`<div class="metric-card"><div class="metric-card-title">${m.title}</div>${m.ranges.map(r=>`<div class="metric-range"><div class="metric-range-label"><span class="metric-range-icon ${r.icon}">${r.icon==='good'?'&#9679;':r.icon==='warning'?'&#9650;':'&#10005;'}</span><span>${r.label}:</span></div><div class="metric-range-value">${r.value}</div></div>`).join('')}</div>`).join('');}
+    function renderSuspiciousPatterns(){const c=document.getElementById('suspiciousPatternsList');if(!c)return;const patterns=[{title:'Broadcast Storm',observed:'Many packets to 255.255.255.255',reasons:['DHCP discovery','NetBIOS resolution','mDNS/Bonjour','SSDP discovery'],worryWhen:'>100 pkts/sec from single device'},{title:'Repeated Connection Attempts',observed:'Same source retrying same destination',reasons:['App retry logic','Background updaters','Health checks','Keep-alives'],worryWhen:'Different ports each time, unknown destinations, hundreds/sec'},{title:'Many External DNS Queries',observed:'Hundreds of DNS queries to different domains',reasons:['Many browser tabs','Email client loading','Social media prefetching'],worryWhen:'Suspicious TLDs, DGA-like random domains'}];c.innerHTML=patterns.map(p=>`<div class="suspicious-pattern-card"><div class="suspicious-pattern-title">${p.title}</div><div class="pattern-observed"><div class="pattern-observed-title">What You See:</div><div class="pattern-observed-desc">${p.observed}</div></div><div class="pattern-legitimate"><div class="pattern-legitimate-title">Legitimate Reasons:</div><ul class="pattern-list">${p.reasons.map(r=>'<li>'+r+'</li>').join('')}</ul></div><div class="pattern-worry-when"><div class="pattern-worry-title">When to Worry:</div><div class="pattern-observed-desc">${p.worryWhen}</div></div></div>`).join('');}
+    function switchPatternsSection(s,btn){document.querySelectorAll('.patterns-nav-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.patterns-section').forEach(sec=>sec.classList.remove('active'));if(btn)btn.classList.add('active');const map={healthy:'healthyPatternsSection',metrics:'metricsSection',suspicious:'suspiciousSection'};document.getElementById(map[s]).classList.add('active');}
+
+    // ============================================
+    // REFERENCE GUIDE RENDER (dynamic)
+    // ============================================
+    function renderReferenceGuide() {
+        const terms = [
+            { icon: '&#128230;', title: 'PCAP (Packet Capture)', def: 'A file format used to store network packet data captured from a network interface.', ctx: 'Used by Wireshark, tcpdump, and WireTrace for offline analysis.', ex: 'A .pcap file containing 10,000 packets captured over 5 minutes.' },
+            { icon: '&#128232;', title: 'Packet', def: 'A formatted unit of data carried across a network, containing headers and payload.', ctx: 'Each row in the PCAP viewer represents one packet.', ex: 'An HTTP GET request is a single packet with TCP, IP, and Ethernet headers.' },
+            { icon: '&#128268;', title: 'Protocol', def: 'A set of rules defining how data is formatted and transmitted (e.g., TCP, UDP, DNS).', ctx: 'Packets are classified by protocol in the Protocol column.', ex: 'DNS protocol packets handle domain name resolution.' },
+            { icon: '&#128290;', title: 'MAC Address', def: 'A unique 48-bit hardware identifier assigned to a network interface controller.', ctx: 'Found in Ethernet frame headers; used for local network communication.', ex: '00:1A:2B:3C:4D:5E — uniquely identifies a device on the LAN.' },
+            { icon: '&#128260;', title: 'ARP (Address Resolution Protocol)', def: 'Protocol mapping IP addresses to MAC addresses on a local network.', ctx: 'ARP packets reveal which devices are communicating on the LAN.', ex: '"Who has 192.168.1.1? Tell 192.168.1.100" — device asking for the router\'s MAC.' },
+            { icon: '&#127760;', title: 'DNS (Domain Name System)', def: 'Protocol that resolves human-readable domain names to IP addresses.', ctx: 'DNS queries/responses show which websites or services devices are accessing.', ex: 'Query: "What is the IP of google.com?" → Response: "142.250.80.46"' },
+            { icon: '&#127968;', title: 'DHCP (Dynamic Host Config)', def: 'Protocol that automatically assigns IP addresses and network config to devices.', ctx: 'DHCP Discover/Offer/Request/ACK sequences show devices joining the network.', ex: 'DHCP Offer from 192.168.1.1 assigns IP 192.168.1.50 to a new device.' },
+            { icon: '&#128260;', title: 'TCP (Transmission Control)', def: 'Connection-oriented protocol providing reliable, ordered data delivery.', ctx: 'Most web traffic uses TCP. SYN/ACK/FIN flags show connection lifecycle.', ex: 'TCP SYN from port 52341 → port 443 initiates an HTTPS connection.' },
+            { icon: '&#9889;', title: 'UDP (User Datagram Protocol)', def: 'Connectionless protocol offering fast, lightweight data transmission without guaranteed delivery.', ctx: 'Used by DNS, DHCP, streaming, gaming, and VoIP.', ex: 'DNS queries typically use UDP port 53 for speed.' },
+            { icon: '&#128226;', title: 'ICMP (Internet Control Message)', def: 'Protocol for diagnostic and error messages between network devices.', ctx: 'Ping requests/replies and traceroute use ICMP. "Destination Unreachable" means a device or port cannot be reached.', ex: 'Echo Request (Type 8) from 192.168.1.5 to 8.8.8.8 — testing connectivity.' },
+            { icon: '&#128225;', title: 'PPPoE (Point-to-Point over Ethernet)', def: 'Protocol for encapsulating PPP frames inside Ethernet, commonly used by ISPs for broadband.', ctx: 'PADI/PADO/PADR/PADS sequences indicate broadband connection establishment.', ex: 'PADI (PPPoE Active Discovery Initiation) — router trying to connect to ISP.' },
+            { icon: '&#128256;', title: 'VLAN (Virtual LAN)', def: 'A logical subdivision of a LAN, tagged with an ID in the 802.1Q header.', ctx: 'WireTrace shows VLAN IDs in packet info (e.g., "VLAN 100"). Common in router captures.', ex: 'VLAN 100 for data traffic, VLAN 200 for voice traffic on the same physical link.' },
+            { icon: '&#128039;', title: 'Linux SLL (Cooked-mode Capture)', def: 'A special packet header format used when capturing on Linux "any" interface.', ctx: 'When tcpdump uses -i any, all packets get an SLL header. Source MAC is extracted from this header.', ex: 'You\'ll see "Linux SLL" as destination — this is normal, it\'s the capture format, not a real device.' },
+            { icon: '&#9201;', title: 'TTL (Time To Live)', def: 'Counter in IP headers decremented at each router hop; packet discarded when it reaches zero.', ctx: 'Helps identify routing loops and estimate distance to remote hosts.', ex: 'TTL=64 suggests Linux/Mac origin. TTL=128 suggests Windows.' },
+            { icon: '&#127760;', title: 'IPv6', def: 'Next-generation Internet Protocol using 128-bit addresses instead of IPv4\'s 32-bit.', ctx: 'WireTrace shows IPv6 addresses in full hex notation. Common in modern network traffic.', ex: '2001:db8:1:1::1 — a documentation-range IPv6 address.' },
+            { icon: '&#9888;', title: 'ARP Spoofing', def: 'An attack where a device sends forged ARP replies to associate its MAC with another device\'s IP.', ctx: 'WireTrace\'s Security tab detects this — a critical man-in-the-middle (MITM) attack indicator.', ex: 'Device 02:ab:cd:ef:12:34 falsely claims to be 192.168.1.1 (the gateway).' },
+            { icon: '&#128274;', title: 'HTTP vs HTTPS', def: 'HTTP (port 80) is unencrypted web traffic. HTTPS (port 443) is encrypted with TLS/SSL.', ctx: 'WireTrace classifies packets by port: 80=HTTP, 443=HTTPS. HTTPS payload cannot be decoded.', ex: 'TCP SYN to port 443 shows as HTTPS; to port 80 shows as HTTP.' },
+        ];
+        document.getElementById('jargonGrid').innerHTML = terms.map(t => `<div class="guide-card"><div class="card-header"><span class="card-header-icon">${t.icon}</span><span class="card-header-title">${t.title}</span></div><div class="flow-sequence"><div class="flow-item"><span class="flow-arrow">&#128196;</span><span class="flow-text">${t.def}</span></div><div class="flow-desc">Context: ${t.ctx}</div><div class="flow-desc">Example: ${t.ex}</div></div></div>`).join('');
+        
+        const interp = [
+            { icon: '&#128260;', title: 'TCP Connection Lifecycle', items: [{a:'SYN',t:'Client initiates connection'},{a:'SYN-ACK',t:'Server acknowledges and accepts'},{a:'ACK',t:'Client confirms — connection established'},{a:'FIN',t:'Either side closes connection gracefully'},{a:'RST',t:'Connection reset (abrupt termination)'}], tip: 'Multiple RST packets to the same destination suggest a service is unavailable or a firewall is blocking. SYN without SYN-ACK means the server is not responding at all.' },
+            { icon: '&#127760;', title: 'DNS Resolution Flow', items: [{a:'Query',t:'Device asks "What is the IP for example.com?"'},{a:'Response (No error)',t:'Server returns the IP address'},{a:'Response (Name error)',t:'Domain doesn\'t exist (NXDOMAIN)'},{a:'Response (Server failure)',t:'DNS server couldn\'t process the request'}], tip: 'Frequent Server Failure responses indicate DNS server issues. Name errors for internal domains suggest misconfiguration. Many unanswered queries = DNS server is down or unreachable.' },
+            { icon: '&#127968;', title: 'DHCP Handshake (DORA)', items: [{a:'Discover',t:'Client broadcasts: "I need an IP address"'},{a:'Offer',t:'Server responds: "You can have 192.168.1.50"'},{a:'Request',t:'Client: "I\'ll take 192.168.1.50"'},{a:'ACK',t:'Server: "Confirmed, it\'s yours for 24h"'}], tip: 'Missing Offer after Discover suggests DHCP server is down. Multiple Discovers indicate the client can\'t get an address. Frequent Request/ACK cycles suggest short lease times or WiFi reconnections.' },
+            { icon: '&#128225;', title: 'PPPoE Session Setup', items: [{a:'PADI',t:'Router initiates ISP discovery (broadcast)'},{a:'PADO',t:'ISP responds with service offer'},{a:'PADR',t:'Router requests specific service'},{a:'PADS',t:'ISP confirms — session established'},{a:'PADT',t:'Either side terminates session'}], tip: 'PADI without PADO means ISP equipment is unreachable. Frequent PADT indicates unstable broadband. Repeated PADI→PADO→PADR→PADS cycles = reconnect loop.' },
+            { icon: '&#128226;', title: 'ICMP Interpretation', items: [{a:'Echo Request/Reply',t:'Ping — testing if a host is reachable'},{a:'Destination Unreachable',t:'Target IP or port cannot be reached'},{a:'Time Exceeded',t:'Packet TTL hit zero — possible routing loop'},{a:'Port Unreachable',t:'Specific service/port is not listening'}], tip: 'ICMP Destination Unreachable from the router (e.g., 192.168.1.1 → device) usually means the router tried to forward traffic but the upstream destination is down. From 8.8.8.8 → device means Google\'s DNS rejected the connection. This is common during ISP outages.' },
+            { icon: '&#128246;', title: 'WiFi Disconnection Patterns (Event Logs)', items: [{a:'DEAUTH Reason 1',t:'Unspecified reason — generic disconnect'},{a:'DEAUTH Reason 3',t:'Station leaving the network (normal)'},{a:'DEAUTH Reason 7',t:'Not authenticated — device needs to re-auth'},{a:'AP-STA-DISCONNECTED',t:'Access point reports client disconnected'},{a:'AP-STA-CONNECTED',t:'Client successfully (re)joined WiFi'}], tip: 'Repeated DEAUTH for one MAC = device-specific issue (driver, distance, interference). DEAUTH storms across many MACs = AP overloaded. Rapid CONNECTED/DISCONNECTED alternating between interfaces = band steering or roaming issues.' },
+            { icon: '&#127758;', title: 'WAN Event Patterns (Event Logs)', items: [{a:'PPPoE PADI sequences',t:'Router attempting to re-establish ISP connection'},{a:'Link Up/Down events',t:'Physical line issues (cable, exchange, weather)'},{a:'LCP down/terminated',t:'PPPoE authentication or keepalive failure'},{a:'eth0 Link DOWN',t:'Physical Ethernet connection lost'}], tip: 'Check timestamps of WAN events against reported outage times. Link DOWN followed by Link Up at lower speed (e.g., 100 Mbps instead of 1000) suggests cable degradation.' },
+            { icon: '&#128737;', title: 'Security Tab — What It Detects', items: [{a:'ARP Spoofing',t:'Device claiming to be the gateway with wrong MAC — MITM attack'},{a:'ARP Flooding',t:'Excessive ARP replies (>60/min) — network scanning or poisoning'},{a:'Rogue DHCP',t:'Unauthorized device offering IP addresses to clients'},{a:'ARP Scan',t:'Device claiming multiple different IPs — reconnaissance activity'}], tip: 'ARP Spoofing is the most critical finding — it means a device is intercepting traffic. ARP Flooding at moderate rates (5-30/min) is normal for busy LANs. Rogue DHCP from a non-gateway IP is a serious concern.' },
+        ];
+        document.getElementById('dataInterpretation').innerHTML = '<h3 class="subsection-title">Reading PCAP Data</h3>' + interp.slice(0,5).map(i => `<div class="guide-card"><div class="card-header"><span class="card-header-icon">${i.icon}</span><span class="card-header-title">${i.title}</span></div><div class="flow-sequence">${i.items.map(it => `<div class="flow-item"><span class="flow-arrow">${it.a}</span><span class="flow-text">→ ${it.t}</span></div>`).join('')}</div><div class="tip-box"><span class="tip-icon">&#128269;</span><span class="tip-text"><strong>What to look for:</strong> ${i.tip}</span></div></div>`).join('') + '<h3 class="subsection-title" style="margin-top:40px;">Reading Event Logs</h3>' + interp.slice(5,7).map(i => `<div class="guide-card"><div class="card-header"><span class="card-header-icon">${i.icon}</span><span class="card-header-title">${i.title}</span></div><div class="flow-sequence">${i.items.map(it => `<div class="flow-item"><span class="flow-arrow">${it.a}</span><span class="flow-text">→ ${it.t}</span></div>`).join('')}</div><div class="tip-box"><span class="tip-icon">&#128269;</span><span class="tip-text"><strong>What to look for:</strong> ${i.tip}</span></div></div>`).join('') + '<h3 class="subsection-title" style="margin-top:40px;">Understanding WireTrace Features</h3>' + interp.slice(7).map(i => `<div class="guide-card"><div class="card-header"><span class="card-header-icon">${i.icon}</span><span class="card-header-title">${i.title}</span></div><div class="flow-sequence">${i.items.map(it => `<div class="flow-item"><span class="flow-arrow">${it.a}</span><span class="flow-text">→ ${it.t}</span></div>`).join('')}</div><div class="tip-box"><span class="tip-icon">&#128269;</span><span class="tip-text"><strong>What to look for:</strong> ${i.tip}</span></div></div>`).join('');
+    }
+
+    // ============================================
+    // APP SIDEBAR
+    // ============================================
+    function toggleAppSidebar(){document.getElementById('appSidebar').classList.toggle('mobile-open');document.getElementById('appSidebarOverlay').classList.toggle('open');}
+    function sidebarAction(action){if(window.innerWidth<=768)toggleAppSidebar();switch(action){case'home':showMainTool();break;case'guide':showReferenceGuide();break;case'patterns':showPatternsPage();break;case'combinedFindings':switchViewerTab('combined');showMainTool();break;}updateAppSidebarState();}
+    function updateAppSidebarState(){}
+
+    function expandFindingGroup(btn, source, key) {
+        const cleanKey = key.replace(/[^a-zA-Z0-9]/g, '');
+        const extra = document.getElementById(source + '-group-extra-' + cleanKey);
+        if (extra) {
+            extra.style.display = extra.style.display === 'none' ? 'flex' : 'none';
+            btn.textContent = extra.style.display === 'none' ? btn.textContent : 'Show less';
+        }
+    }
+    function updateTimePlaceholders(){if(pcapLoaded&&allPackets.length>1){const first=new Date(allPackets[0].absTimestamp*1000);const last=new Date(allPackets[allPackets.length-1].absTimestamp*1000);const fmt=d=>`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;document.getElementById('pcapTimeFrom').placeholder=fmt(first);document.getElementById('pcapTimeTo').placeholder=fmt(last);}if(eventLoaded&&allEvents.length>1){const ft=(allEvents[0].time||'').split(':').slice(0,2).join(':');const lt=(allEvents[allEvents.length-1].time||'').split(':').slice(0,2).join(':');if(ft)document.getElementById('eventTimeFrom').placeholder=ft;if(lt)document.getElementById('eventTimeTo').placeholder=lt;}}
+
+    // ============================================
+    // INIT
+    // ============================================
+    setupDropZone('pcapDropZone', 'pcapFileInput', 'pcap');
+    setupDropZone('eventDropZone', 'eventFileInput', 'event');
+    updateAppSidebarState();
+    </script>
+</body>
+</html>
