@@ -26,7 +26,7 @@
             --border: #30363d;
             --hover: rgba(220, 40, 87, 0.1);
             --code-bg: #161b22;
-            
+
             --proto-pppoe: #ec4899;
             --proto-ipv6: #8b5cf6;
             --proto-arp: #10b981;
@@ -41,7 +41,7 @@
             --proto-sll: #64748b;
             --proto-vlan: #c084fc;
             --proto-ipv4: #38bdf8;
-            
+
             --status-error: #991b1b;
             --status-warning: #92400e;
             --status-ok: #065f46;
@@ -174,11 +174,15 @@
         }
         .file-badge .badge-x:hover { opacity: 1; }
         .drop-bar-chevron {
-            font-size: 18px;
+            width: 8px;
+            height: 8px;
+            border-right: 2px solid var(--text-secondary);
+            border-bottom: 2px solid var(--text-secondary);
+            transform: rotate(45deg);
             color: var(--text-secondary);
             transition: transform 0.3s;
         }
-        .drop-bar.collapsed .drop-bar-chevron { transform: rotate(-90deg); }
+        .drop-bar.collapsed .drop-bar-chevron { transform: rotate(-135deg); }
         .drop-bar-body {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -793,6 +797,13 @@
             border-radius: 8px; color: var(--text-primary); font-size: 22px; cursor: pointer;
             align-items: center; justify-content: center;
         }
+        .app-sidebar-hamburger::before {
+            content: '';
+            width: 16px;
+            height: 2px;
+            background: var(--text-primary);
+            box-shadow: 0 -5px var(--text-primary), 0 5px var(--text-primary);
+        }
         .app-sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 899; }
         .app-sidebar-overlay.open { display: block; }
         @media (max-width: 768px) {
@@ -818,25 +829,25 @@
     </style>
 </head>
 <body>
-    <button class="app-sidebar-hamburger" onclick="toggleAppSidebar()">&#9776;</button>
+    <button class="app-sidebar-hamburger" onclick="toggleAppSidebar()" aria-label="Open navigation"></button>
     <div class="app-sidebar-overlay" id="appSidebarOverlay" onclick="toggleAppSidebar()"></div>
 
     <nav id="appSidebar" class="app-sidebar">
         <div class="app-sidebar-brand">
-            <span class="app-sidebar-icon" style="font-size:18px;color:var(--crimson);">&#9670;</span>
-            <span class="app-sidebar-label"><span class="wire">Voda</span><span class="trace">Trace</span></span>
+
+            <span class="app-sidebar-label"><span class="wire">Wire</span><span class="trace">Trace</span></span>
         </div>
         <div class="app-sidebar-section-title">General</div>
         <button class="app-sidebar-item" onclick="sidebarAction('home')">
-            <span class="app-sidebar-icon">&#8962;</span>
+
             <span class="app-sidebar-label">Home / Main Tool</span>
         </button>
         <button class="app-sidebar-item" onclick="sidebarAction('guide')">
-            <span class="app-sidebar-icon">&#9776;</span>
+
             <span class="app-sidebar-label">Reference Guide</span>
         </button>
         <button class="app-sidebar-item" onclick="sidebarAction('patterns')">
-            <span class="app-sidebar-icon">&#9830;</span>
+
             <span class="app-sidebar-label">Traffic Patterns</span>
         </button>
         <div class="app-sidebar-divider"></div>
@@ -846,7 +857,7 @@
         <div id="mainTool">
             <header class="header">
                 <div class="header-content">
-                    <h1><span class="wire">Voda</span><span class="trace">Trace</span></h1>
+                    <h1><span class="wire">Wire</span><span class="trace">Trace</span></h1>
                     <p class="subtitle">PCAP & Event Logs Analysis Tool</p>
                     <p class="attribution">Created by Moaz Essam</p>
                 </div>
@@ -856,22 +867,22 @@
             <div class="drop-bar" id="dropBar">
                 <div class="drop-bar-header" onclick="toggleDropBar()">
                     <div class="drop-bar-header-left">
-                        <span class="icon">&#128193;</span>
+
                         <span>File Upload</span>
                         <div class="drop-bar-badges" id="dropBarBadges"></div>
                     </div>
-                    <span class="drop-bar-chevron" id="dropBarChevron">&#9660;</span>
+                    <span class="drop-bar-chevron" id="dropBarChevron" aria-hidden="true"></span>
                 </div>
                 <div class="drop-bar-body" id="dropBarBody">
                     <div class="drop-zone-mini pcap-zone" id="pcapDropZone">
-                        <div class="dz-icon">&#128300;</div>
+
                         <div class="dz-title">PCAP Packet Capture</div>
                         <div class="dz-hint">Drop .pcap or .pcapng</div>
                         <div class="dz-file-info" id="pcapFileInfo" style="display:none"></div>
                         <input type="file" id="pcapFileInput" accept=".pcap,.pcapng" style="display:none">
                     </div>
                     <div class="drop-zone-mini event-zone" id="eventDropZone">
-                        <div class="dz-icon">&#128203;</div>
+
                         <div class="dz-title">Event Log</div>
                         <div class="dz-hint">Drop .log, .csv, or .txt</div>
                         <div class="dz-file-info" id="eventFileInfo" style="display:none"></div>
@@ -889,13 +900,13 @@
             <!-- Viewer Tabs -->
             <div class="viewer-tabs" id="viewerTabs">
                 <button class="viewer-tab-btn pcap-tab" id="tabPcap" onclick="switchViewerTab('pcap')">
-                    &#128300; PCAP <span class="tab-count" id="tabPcapCount"></span>
+                     PCAP <span class="tab-count" id="tabPcapCount"></span>
                 </button>
                 <button class="viewer-tab-btn event-tab" id="tabEvent" onclick="switchViewerTab('event')">
-                    &#128203; Event Log <span class="tab-count" id="tabEventCount"></span>
+                     Event Log <span class="tab-count" id="tabEventCount"></span>
                 </button>
                 <button class="viewer-tab-btn combined-tab" id="tabCombined" onclick="switchViewerTab('combined')" style="display:none">
-                    &#128279; Combined Findings
+                     Combined Findings
                 </button>
             </div>
 
@@ -923,9 +934,9 @@
                         <option value="10000">10,000</option>
                         <option value="0">All</option>
                     </select>
-                    <button class="btn-clear" onclick="movePcapWindow(-1)" title="Previous page" style="padding:8px 12px;">&#9664;</button>
+                    <button class="btn-clear" onclick="movePcapWindow(-1)" title="Previous page" style="padding:8px 12px;">Previous</button>
                     <span class="packet-count" id="pcapWindowLabel" style="min-width:90px;text-align:center;"></span>
-                    <button class="btn-clear" onclick="movePcapWindow(1)" title="Next page" style="padding:8px 12px;">&#9654;</button>
+                    <button class="btn-clear" onclick="movePcapWindow(1)" title="Next page" style="padding:8px 12px;">Next</button>
                     <span class="packet-count" id="packetCount">0 packets</span>
                 </div>
                 <div class="split-layout">
@@ -945,28 +956,28 @@
                     </div>
                     <div class="sidebar">
                         <div class="sidebar-tabs">
-                            <div class="sidebar-tab active" data-pcap-tab="details" onclick="switchSidebarTab('details')">&#128230; Details</div>
-                            <div class="sidebar-tab" data-pcap-tab="endpoints" onclick="switchSidebarTab('endpoints')">&#127760; Endpoints</div>
-                            <div class="sidebar-tab" data-pcap-tab="security" onclick="switchSidebarTab('security')">&#128737;&#65039; Security</div>
+                            <div class="sidebar-tab active" data-pcap-tab="details" onclick="switchSidebarTab('details')">Details</div>
+                            <div class="sidebar-tab" data-pcap-tab="endpoints" onclick="switchSidebarTab('endpoints')">Endpoints</div>
+                            <div class="sidebar-tab" data-pcap-tab="security" onclick="switchSidebarTab('security')">Security</div>
                         </div>
                         <div class="sidebar-content active" data-pcap-panel="details">
                             <div class="detail-section">
-                                <h3>&#128230; Packet Details</h3>
+                                <h3>Packet Details</h3>
                                 <div id="packetDetailsContent"><p class="text-muted" style="text-align:center;padding:20px;">Click a packet to view details</p></div>
                             </div>
                             <div class="detail-section">
-                                <h3>&#128202; Capture Statistics</h3>
+                                <h3>Capture Statistics</h3>
                                 <div id="pcapStats"></div>
                             </div>
                         </div>
                         <div class="sidebar-content" data-pcap-panel="endpoints">
-                            <div class="detail-section"><h3>&#128187; IP Endpoints</h3><div id="ipEndpoints"></div></div>
-                            <div class="detail-section"><h3>&#128268; MAC Endpoints</h3><div id="macEndpoints"></div></div>
+                            <div class="detail-section"><h3>IP Endpoints</h3><div id="ipEndpoints"></div></div>
+                            <div class="detail-section"><h3>MAC Endpoints</h3><div id="macEndpoints"></div></div>
                         </div>
                         <div class="sidebar-content" data-pcap-panel="security">
                             <div class="detail-section">
-                                <h3>&#128737;&#65039; Rogue Device Detection</h3>
-                                <div id="rogueDevicesContent"><p class="security-ok">&#9989; No suspicious devices detected</p></div>
+                                <h3>Rogue Device Detection</h3>
+                                <div id="rogueDevicesContent"><p class="security-ok">No suspicious devices detected</p></div>
                             </div>
                         </div>
                     </div>
@@ -994,9 +1005,9 @@
                         <option value="10000">10,000</option>
                         <option value="0">All</option>
                     </select>
-                    <button class="btn-clear" onclick="moveEventWindow(-1)" title="Previous page" style="padding:8px 12px;">&#9664;</button>
+                    <button class="btn-clear" onclick="moveEventWindow(-1)" title="Previous page" style="padding:8px 12px;">Previous</button>
                     <span class="packet-count" id="eventWindowLabel" style="min-width:90px;text-align:center;"></span>
-                    <button class="btn-clear" onclick="moveEventWindow(1)" title="Next page" style="padding:8px 12px;">&#9654;</button>
+                    <button class="btn-clear" onclick="moveEventWindow(1)" title="Next page" style="padding:8px 12px;">Next</button>
                     <span class="packet-count" id="eventCount">0 events</span>
                 </div>
                 <div class="split-layout">
@@ -1014,15 +1025,15 @@
                     </div>
                     <div class="sidebar">
                         <div class="sidebar-tabs">
-                            <div class="sidebar-tab active" data-event-tab="details" onclick="switchEventSidebarTab('details')">&#128203; Details</div>
+                            <div class="sidebar-tab active" data-event-tab="details" onclick="switchEventSidebarTab('details')">Details</div>
                         </div>
                         <div class="sidebar-content active" data-event-panel="details">
                             <div class="detail-section">
-                                <h3>&#128203; Event Details</h3>
+                                <h3>Event Details</h3>
                                 <div id="eventDetailsContent"><p class="text-muted" style="text-align:center;padding:20px;">Click an event to view details</p></div>
                             </div>
                             <div class="detail-section">
-                                <h3>&#128202; Pattern Analysis</h3>
+                                <h3>Pattern Analysis</h3>
                                 <div id="eventPatterns"></div>
                             </div>
                         </div>
@@ -1047,7 +1058,7 @@
         <div id="tcpStreamModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>&#128279; TCP Stream Viewer</h2>
+                    <h2>TCP Stream Viewer</h2>
                     <button class="modal-close" onclick="closeStreamModal()">&times;</button>
                 </div>
                 <div class="modal-body">
@@ -1055,7 +1066,7 @@
                     <div id="streamData" class="stream-content"></div>
                 </div>
                 <div class="modal-footer">
-                    <button class="action-btn" onclick="exportTCPStream()">&#128190; Export Stream</button>
+                    <button class="action-btn" onclick="exportTCPStream()">Export Stream</button>
                     <button class="action-btn-secondary action-btn" onclick="closeStreamModal()">Close</button>
                 </div>
             </div>
@@ -1066,24 +1077,24 @@
             <header class="header">
                 <div class="header-content">
                     <a href="#" class="back-link" onclick="showMainTool(); return false;">&#8592; Back to WireTrace</a>
-                    <h1><span class="wire">Voda</span><span class="trace">Trace</span> Reference Guide</h1>
+                    <h1><span class="wire">Wire</span><span class="trace">Trace</span> Reference Guide</h1>
                     <p class="subtitle">Network Analysis Terminology & Data Interpretation</p>
                 </div>
             </header>
             <nav class="toc">
-                <h2>&#128209; Table of Contents</h2>
+                <h2>Table of Contents</h2>
                 <ul class="toc-list">
-                    <li class="toc-item"><a href="#jargon-buster" class="toc-link"><span class="toc-icon">&#128292;</span><span class="toc-title">Jargon Buster</span></a></li>
-                    <li class="toc-item"><a href="#data-interpretation" class="toc-link"><span class="toc-icon">&#128202;</span><span class="toc-title">Data Interpretation Guide</span></a></li>
+                    <li class="toc-item"><a href="#jargon-buster" class="toc-link"><span class="toc-title">Jargon Buster</span></a></li>
+                    <li class="toc-item"><a href="#data-interpretation" class="toc-link"><span class="toc-title">Data Interpretation Guide</span></a></li>
                 </ul>
             </nav>
             <!-- Jargon Buster & Data Interpretation sections preserved from original -->
             <section id="jargon-buster" class="section">
-                <div class="section-header"><span class="section-icon">&#128292;</span><h2 class="section-title">Jargon Buster</h2></div>
+                <div class="section-header"><h2 class="section-title">Jargon Buster</h2></div>
                 <div class="subsection"><h3 class="subsection-title">PCAP & Network Terms</h3><div class="guide-grid" id="jargonGrid"></div></div>
             </section>
             <section id="data-interpretation" class="section">
-                <div class="section-header"><span class="section-icon">&#128202;</span><h2 class="section-title">Data Interpretation Guide</h2></div>
+                <div class="section-header"><h2 class="section-title">Data Interpretation Guide</h2></div>
                 <div class="subsection" id="dataInterpretation"></div>
             </section>
         </div>
@@ -1169,10 +1180,10 @@
         const badges = document.getElementById('dropBarBadges');
         let html = '';
         if (pcapLoaded) {
-            html += `<span class="file-badge pcap-badge">${truncate(pcapFilename, 20)} (${allPackets.length.toLocaleString()} pkts) <span class="badge-x" onclick="event.stopPropagation(); removePcapFile()">&#10005;</span></span>`;
+            html += `<span class="file-badge pcap-badge">${truncate(pcapFilename, 20)} (${allPackets.length.toLocaleString()} pkts) <span class="badge-x" onclick="event.stopPropagation(); removePcapFile()">x</span></span>`;
         }
         if (eventLoaded) {
-            html += `<span class="file-badge event-badge">${truncate(eventFilename, 20)} (${allEvents.length.toLocaleString()} evts) <span class="badge-x" onclick="event.stopPropagation(); removeEventFile()">&#10005;</span></span>`;
+            html += `<span class="file-badge event-badge">${truncate(eventFilename, 20)} (${allEvents.length.toLocaleString()} evts) <span class="badge-x" onclick="event.stopPropagation(); removeEventFile()">x</span></span>`;
         }
         badges.innerHTML = html;
     }
@@ -1648,11 +1659,11 @@
     function renderPacketTable(){const tb=document.getElementById('packetTableBody');tb.innerHTML='';const lim=parseInt(document.getElementById('displayLimit').value);let pts;if(lim===0){pts=filteredPackets;pcapWindowStart=0;}else{if(pcapWindowStart>=filteredPackets.length)pcapWindowStart=Math.max(0,filteredPackets.length-lim);if(pcapWindowStart<0)pcapWindowStart=0;pts=filteredPackets.slice(pcapWindowStart,pcapWindowStart+lim);}pts.forEach(p=>{const r=document.createElement('tr');r.dataset.pktNo=p.no;r.onclick=()=>{document.querySelectorAll('#packetTableBody tr.selected').forEach(t=>t.classList.remove('selected'));r.classList.add('selected');selectedItem=p;displayPacketDetails(p);};r.innerHTML=`<td class="text-muted">${p.no}</td><td class="text-muted">${formatTimeForDisplay(p.timestamp,p.absTimestamp)}</td><td>${p.source}</td><td>${p.destination}</td><td class="protocol protocol-${p.protocol.toLowerCase()}">${p.protocol}</td><td class="text-muted">${p.length}</td><td>${p.info}</td>`;tb.appendChild(r);});const wl=document.getElementById('pcapWindowLabel');if(lim>0&&filteredPackets.length>lim){const end=Math.min(pcapWindowStart+lim,filteredPackets.length);wl.textContent=`${(pcapWindowStart+1).toLocaleString()}-${end.toLocaleString()}`;wl.style.display='';}else{wl.textContent='';wl.style.display='none';}document.getElementById('packetCount').textContent=`${filteredPackets.length.toLocaleString()} packets`;}
     function movePcapWindow(dir){const lim=parseInt(document.getElementById('displayLimit').value);if(lim===0)return;const step=Math.max(Math.floor(lim*0.8),100);pcapWindowStart+=dir*step;if(pcapWindowStart<0)pcapWindowStart=0;if(pcapWindowStart>=filteredPackets.length)pcapWindowStart=Math.max(0,filteredPackets.length-lim);renderPacketTable();document.querySelector('#pcapViewer .packet-list').scrollTop=0;}
     function selectPacket(p){selectedItem=p;document.querySelectorAll('#packetTableBody tr.selected').forEach(t=>t.classList.remove('selected'));const row=document.querySelector(`#packetTableBody tr[data-pkt-no="${p.no}"]`);if(row)row.classList.add('selected');displayPacketDetails(p);}
-    function displayPacketDetails(packet){const c=document.getElementById('packetDetailsContent');let h=`<div class="layer-section"><div class="layer-title">Frame ${packet.no}</div><div class="detail-row"><span class="detail-label">Length</span><span class="detail-value">${packet.length} bytes</span></div><div class="detail-row"><span class="detail-label">Relative Time</span><span class="detail-value">${packet.timestamp} s</span></div><div class="detail-row"><span class="detail-label">Absolute Time</span><span class="detail-value">${new Date(packet.absTimestamp*1000).toISOString()}</span></div><div class="detail-row"><span class="detail-label">Protocol</span><span class="detail-value protocol-${packet.protocol.toLowerCase()}">${packet.protocol}</span></div></div>`;if(packet.protocol==='TCP'||packet.layers?.tcp)h+=`<div style="margin:15px 0;"><button class="action-btn" style="width:100%;" onclick="followTCPStream(${packet.no})">&#128279; Follow TCP Stream</button></div>`;for(const l in packet.layers){h+=`<div class="layer-section"><div class="layer-title">${l.toUpperCase()}</div>`;const ld=packet.layers[l];for(const f in ld){if(typeof ld[f]==='object'){h+=`<div class="layer-field">${f}:</div>`;for(const sf in ld[f])h+=`<div class="layer-field" style="margin-left:15px;">${sf}: <span>${ld[f][sf]}</span></div>`;}else h+=`<div class="layer-field">${f}: <span>${ld[f]}</span></div>`;}h+=`</div>`;}if(packet.rawData&&packet.rawData.byteLength>0){const mx=hexDumpExpanded?packet.rawData.byteLength:128;h+=`<div class="layer-section"><div class="layer-title">Hex Dump (${packet.rawData.byteLength} bytes)</div><div class="hex-dump">${generateHexDump(packet.rawData,mx)}</div>${packet.rawData.byteLength>128?`<button class="hex-expand-btn" onclick="toggleHexDump(${packet.no})">${hexDumpExpanded?'Show Less':'Show All'}</button>`:''}</div>`;}c.innerHTML=h;}
+    function displayPacketDetails(packet){const c=document.getElementById('packetDetailsContent');let h=`<div class="layer-section"><div class="layer-title">Frame ${packet.no}</div><div class="detail-row"><span class="detail-label">Length</span><span class="detail-value">${packet.length} bytes</span></div><div class="detail-row"><span class="detail-label">Relative Time</span><span class="detail-value">${packet.timestamp} s</span></div><div class="detail-row"><span class="detail-label">Absolute Time</span><span class="detail-value">${new Date(packet.absTimestamp*1000).toISOString()}</span></div><div class="detail-row"><span class="detail-label">Protocol</span><span class="detail-value protocol-${packet.protocol.toLowerCase()}">${packet.protocol}</span></div></div>`;if(packet.protocol==='TCP'||packet.layers?.tcp)h+=`<div style="margin:15px 0;"><button class="action-btn" style="width:100%;" onclick="followTCPStream(${packet.no})">Follow TCP Stream</button></div>`;for(const l in packet.layers){h+=`<div class="layer-section"><div class="layer-title">${l.toUpperCase()}</div>`;const ld=packet.layers[l];for(const f in ld){if(typeof ld[f]==='object'){h+=`<div class="layer-field">${f}:</div>`;for(const sf in ld[f])h+=`<div class="layer-field" style="margin-left:15px;">${sf}: <span>${ld[f][sf]}</span></div>`;}else h+=`<div class="layer-field">${f}: <span>${ld[f]}</span></div>`;}h+=`</div>`;}if(packet.rawData&&packet.rawData.byteLength>0){const mx=hexDumpExpanded?packet.rawData.byteLength:128;h+=`<div class="layer-section"><div class="layer-title">Hex Dump (${packet.rawData.byteLength} bytes)</div><div class="hex-dump">${generateHexDump(packet.rawData,mx)}</div>${packet.rawData.byteLength>128?`<button class="hex-expand-btn" onclick="toggleHexDump(${packet.no})">${hexDumpExpanded?'Show Less':'Show All'}</button>`:''}</div>`;}c.innerHTML=h;}
     function generateHexDump(buffer,maxBytes){const b=new Uint8Array(buffer);const l=Math.min(b.length,maxBytes);let d='';for(let i=0;i<l;i+=16){const o=i.toString(16).padStart(4,'0');const hx=[],as=[];for(let j=0;j<16&&i+j<l;j++){const by=b[i+j];hx.push(by.toString(16).padStart(2,'0'));as.push(by>=32&&by<127?String.fromCharCode(by):'.');}d+=`${o}  ${hx.join(' ').padEnd(47,' ')}  ${as.join('')}\n`;}if(b.length>maxBytes&&maxBytes<b.length)d+=`\n... (${b.length-maxBytes} more bytes)`;return d;}
     function updatePCAPStatistics(){document.getElementById('pcapStats').innerHTML=`<div class="stats-grid"><div class="stat-card"><div class="stat-label">Total Packets</div><div class="stat-value">${stats.totalPackets?.toLocaleString()||0}</div></div><div class="stat-card"><div class="stat-label">Duration</div><div class="stat-value">${stats.duration||'N/A'}</div></div><div class="stat-card"><div class="stat-label">Avg Rate</div><div class="stat-value">${stats.avgRate||'N/A'}</div></div></div><div class="protocol-list"><h4 style="color:var(--text-secondary);font-size:11px;margin:15px 0 10px;">PROTOCOLS</h4>${stats.protocols?Object.entries(stats.protocols).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([p,c])=>`<div class="protocol-item"><span class="protocol protocol-${p.toLowerCase()}">${p}</span><span>${c.toLocaleString()} (${((c/stats.totalPackets)*100).toFixed(1)}%)</span></div>`).join(''):'<p class="text-muted">No data</p>'}</div>`;}
     function renderEndpoints(){const il=Array.from(ipEndpoints.values()).sort((a,b)=>(b.sent+b.recv)-(a.sent+a.recv)).slice(0,15);document.getElementById('ipEndpoints').innerHTML=il.length?`<table class="endpoint-table"><thead><tr><th>Address</th><th>Packets</th><th>Bytes</th></tr></thead><tbody>${il.map(e=>`<tr onclick="filterByIP('${e.address}')"><td class="endpoint-address">${e.address}</td><td>${(e.sent+e.recv).toLocaleString()}</td><td>${formatBytes(e.sentBytes+e.recvBytes)}</td></tr>`).join('')}</tbody></table>`:'<p class="text-muted">No IP endpoints</p>';const ml=Array.from(macEndpoints.values()).sort((a,b)=>(b.sent+b.recv)-(a.sent+a.recv)).slice(0,15);document.getElementById('macEndpoints').innerHTML=ml.length?`<table class="endpoint-table"><thead><tr><th>Address</th><th>Packets</th><th>Bytes</th></tr></thead><tbody>${ml.map(e=>`<tr onclick="filterByMAC('${e.address}')"><td class="endpoint-address">${e.address}</td><td>${(e.sent+e.recv).toLocaleString()}</td><td>${formatBytes(e.sentBytes+e.recvBytes)}</td></tr>`).join('')}</tbody></table>`:'<p class="text-muted">No MAC endpoints</p>';renderRogueDevices();}
-    function renderRogueDevices(){const c=document.getElementById('rogueDevicesContent');if(!rogueDevices.length){c.innerHTML='<p class="security-ok">&#9989; No suspicious devices detected</p>';return;}c.innerHTML=rogueDevices.map(d=>{const cr=d.severity==='critical';return`<div class="${cr?'security-warning-critical':'security-warning'}"><div class="${cr?'warning-title-critical':'warning-title'}">&#9888;&#65039; ${d.description}</div><div class="warning-details">${d.mac?`<strong>MAC:</strong> ${d.mac}<br>`:''}${d.ip?`<strong>IP:</strong> ${d.ip}<br>`:''}${d.legitimateMAC?`<strong>Legit Gateway MAC:</strong> ${d.legitimateMAC}<br>`:''}<strong>Severity:</strong> ${d.severity.toUpperCase()}</div></div>`;}).join('');}
+    function renderRogueDevices(){const c=document.getElementById('rogueDevicesContent');if(!rogueDevices.length){c.innerHTML='<p class="security-ok">No suspicious devices detected</p>';return;}c.innerHTML=rogueDevices.map(d=>{const cr=d.severity==='critical';return`<div class="${cr?'security-warning-critical':'security-warning'}"><div class="${cr?'warning-title-critical':'warning-title'}"> ${d.description}</div><div class="warning-details">${d.mac?`<strong>MAC:</strong> ${d.mac}<br>`:''}${d.ip?`<strong>IP:</strong> ${d.ip}<br>`:''}${d.legitimateMAC?`<strong>Legit Gateway MAC:</strong> ${d.legitimateMAC}<br>`:''}<strong>Severity:</strong> ${d.severity.toUpperCase()}</div></div>`;}).join('');}
     function filterByIP(ip){document.getElementById('packetFilter').value=ip;applyPCAPFilters();switchSidebarTab('details');}
     function filterByMAC(mac){document.getElementById('packetFilter').value=mac;applyPCAPFilters();switchSidebarTab('details');}
     function parseTimeFilter(val,isEnd){if(!val||!val.trim())return null;const v=val.trim();const parts=v.split(':');if(parts.length<2)return null;const h=parseInt(parts[0])||0,m=parseInt(parts[1])||0;if(parts.length===2){if(isEnd)return h*3600+(m+1)*60-0.001;return h*3600+m*60;}const s=parseFloat(parts[2])||0;return h*3600+m*60+s;}
@@ -1750,7 +1761,7 @@
         const container = document.getElementById('combinedFindingsContent');
         const pFindings = pcapFindings || [];
         const eFindings = (currentEventStats && currentEventStats.findings) || [];
-        
+
         if (pFindings.length === 0 && eFindings.length === 0) {
             container.innerHTML = '<p class="text-muted" style="text-align:center;padding:40px;">No findings detected yet. Load files to analyze.</p>';
             updateViewerTabs();
@@ -1768,7 +1779,7 @@
             const shared = [...pcapEntities].filter(x => eventEntities.has(x));
             if (shared.length > 0) {
                 html += `<div class="findings-section" style="margin:0 0 20px;border-color:rgba(0,212,255,0.5);">
-                    <div class="findings-title"><strong>&#128279; Cross-Referenced (${shared.length} shared entities)</strong><span class="finding-source-tag cross-ref">PCAP + EVENT</span></div>
+                    <div class="findings-title"><strong>Cross-Referenced (${shared.length} shared entities)</strong><span class="finding-source-tag cross-ref">PCAP + EVENT</span></div>
                     <p style="color:var(--text-secondary);font-size:12px;margin-bottom:8px;">These IPs/MACs appear in both PCAP and event log findings.</p>
                     <div class="findings-list">${shared.map(entity => {
                         const pc = pFindings.filter(f => (f.affected||[]).some(a => a.ip===entity||a.mac?.toUpperCase()===entity));
@@ -1791,7 +1802,7 @@
                 grouped.get(key).findings.push(f);
             });
             html += `<div class="findings-section" style="margin:0 0 20px;">
-                <div class="findings-title"><strong>&#128300; PCAP Findings (${pFindings.length} total, ${grouped.size} patterns)</strong><span class="finding-source-tag pcap-source">PCAP</span></div>
+                <div class="findings-title"><strong>PCAP Findings (${pFindings.length} total, ${grouped.size} patterns)</strong><span class="finding-source-tag pcap-source">PCAP</span></div>
                 <div class="findings-list">`;
             for (const [key, group] of grouped) {
                 const ips = new Set();
@@ -1833,7 +1844,7 @@
                 grouped.get(key).findings.push(f);
             });
             html += `<div class="findings-section" style="margin:0 0 20px;border-color:rgba(63,185,80,0.35);">
-                <div class="findings-title"><strong>&#128203; Event Log Findings (${eFindings.length} total, ${grouped.size} patterns)</strong><span class="finding-source-tag event-source">EVENT</span></div>
+                <div class="findings-title"><strong>Event Log Findings (${eFindings.length} total, ${grouped.size} patterns)</strong><span class="finding-source-tag event-source">EVENT</span></div>
                 <div class="findings-list">`;
             for (const [key, group] of grouped) {
                 const macs = new Set();
@@ -1884,11 +1895,11 @@
     // ============================================
     // TRAFFIC PATTERNS (preserved from original)
     // ============================================
-    const NORMAL_PATTERNS=[{id:'dns_resolution',icon:'&#127760;',title:'DNS Resolution',shortDesc:'Device looking up domain names',example:'Query: google.com → Response: 142.250.80.46',fullDescription:'Normal DNS resolution: client query to DNS server (port 53 UDP), response with IP address.',healthyPattern:['Single query per domain (with caching)','Response within 10-200ms','Valid NOERROR response code','Reasonable TTL (300-86400s)'],warningPatterns:['Multiple identical queries','Response times over 500ms','Many NXDOMAIN responses','Queries to unusual DNS servers'],examplePackets:[{type:'query',text:'192.168.1.100 → 8.8.8.8 [DNS Query: google.com Type A]'},{type:'response',text:'8.8.8.8 → 192.168.1.100 [DNS Response: 142.250.80.46]',time:'23ms'}]},{id:'tcp_handshake',icon:'&#129309;',title:'TCP Connection',shortDesc:'Normal 3-way handshake',example:'SYN → SYN-ACK → ACK → Data',fullDescription:'TCP 3-way handshake ensures both endpoints are ready.',healthyPattern:['Complete SYN, SYN-ACK, ACK sequence','No RST packets','Clean FIN closure'],warningPatterns:['SYN without SYN-ACK','Immediate RST','SYN retransmissions'],examplePackets:[{type:'syn',text:'[1] 192.168.1.100:54321 → 93.184.216.34:443 [SYN]'},{type:'synack',text:'[2] 93.184.216.34:443 → 192.168.1.100:54321 [SYN-ACK]'},{type:'ack',text:'[3] 192.168.1.100:54321 → 93.184.216.34:443 [ACK]'}]},{id:'https_browsing',icon:'&#128274;',title:'HTTPS Web Traffic',shortDesc:'Secure browsing with TLS',example:'Port 443 • TLS Handshake',fullDescription:'HTTPS uses TCP port 443 with TLS encryption.',healthyPattern:['TCP handshake on port 443','TLS handshake completes','Encrypted data flows','Bidirectional traffic'],warningPatterns:['Port 443 without TLS','Certificate errors','Unusual destination IPs']},{id:'dhcp_join',icon:'&#127968;',title:'DHCP (Device Joining)',shortDesc:'Device requesting IP from router',example:'DORA: Discover → Offer → Request → ACK',fullDescription:'DHCP DORA process assigns IP addresses.',healthyPattern:['All 4 DORA steps','Completion within 1-2s','Valid IP range','Single DHCP server'],warningPatterns:['Discover without Offer','Multiple DHCP servers','Constant renewals'],examplePackets:[{type:'discover',text:'[1] 0.0.0.0 → 255.255.255.255 [DHCP Discover]'},{type:'offer',text:'[2] 192.168.1.1 → 255.255.255.255 [DHCP Offer: 192.168.1.50]'},{type:'request',text:'[3] 0.0.0.0 → 255.255.255.255 [DHCP Request]'},{type:'ack',text:'[4] 192.168.1.1 → 192.168.1.50 [DHCP ACK]'}]},{id:'arp_resolution',icon:'&#128205;',title:'ARP (Local Network)',shortDesc:'Finding MAC for IP on LAN',example:'Who has 192.168.1.1? → MAC: aa:bb:cc:dd:ee:ff',fullDescription:'ARP resolves IP to MAC addresses on LAN.',healthyPattern:['Request followed by reply','1:1 ratio','Same MAC per IP','Minimal gratuitous ARP'],warningPatterns:['Multiple MACs for one IP','Excessive gratuitous ARP','ARP storms'],examplePackets:[{type:'request',text:'Who has 192.168.1.1? Tell 192.168.1.100'},{type:'reply',text:'192.168.1.1 is at aa:bb:cc:dd:ee:ff'}]},{id:'icmp_ping',icon:'&#128225;',title:'ICMP Ping',shortDesc:'Testing connectivity',example:'Echo Request → Echo Reply',fullDescription:'ICMP ping tests connectivity and latency.',healthyPattern:['Request followed by Reply','RTT under 100ms (LAN)','No packet loss','Consistent TTL'],warningPatterns:['No Reply (host down)','Destination Unreachable','Very high latency'],examplePackets:[{type:'request',text:'192.168.1.100 → 8.8.8.8 [Echo Request] TTL=64'},{type:'reply',text:'8.8.8.8 → 192.168.1.100 [Echo Reply] Time=15ms'}]},{id:'multicast_mdns',icon:'&#128226;',title:'Multicast/mDNS',shortDesc:'Device discovery on LAN',example:'Broadcast: _services._dns-sd._udp.local',fullDescription:'mDNS/SSDP for local service discovery.',healthyPattern:['Broadcast to 224.0.0.251','UDP port 5353 or 1900','Periodic (every few min)'],warningPatterns:['Excessive broadcasts (>100/s)','Multicast to external networks']},{id:'background_updates',icon:'&#128260;',title:'Background Updates',shortDesc:'Apps checking for updates',example:'HTTPS to known update servers',fullDescription:'OS and apps regularly check for updates.',healthyPattern:['Known domains (microsoft.com, etc.)','HTTPS port 443','Periodic (hourly/daily)'],warningPatterns:['Constant connections','Unknown domains','Excessive bandwidth']}];
+    const NORMAL_PATTERNS=[{id:'dns_resolution',title:'DNS Resolution',shortDesc:'Device looking up domain names',example:'Query: google.com → Response: 142.250.80.46',fullDescription:'Normal DNS resolution: client query to DNS server (port 53 UDP), response with IP address.',healthyPattern:['Single query per domain (with caching)','Response within 10-200ms','Valid NOERROR response code','Reasonable TTL (300-86400s)'],warningPatterns:['Multiple identical queries','Response times over 500ms','Many NXDOMAIN responses','Queries to unusual DNS servers'],examplePackets:[{type:'query',text:'192.168.1.100 → 8.8.8.8 [DNS Query: google.com Type A]'},{type:'response',text:'8.8.8.8 → 192.168.1.100 [DNS Response: 142.250.80.46]',time:'23ms'}]},{id:'tcp_handshake',title:'TCP Connection',shortDesc:'Normal 3-way handshake',example:'SYN → SYN-ACK → ACK → Data',fullDescription:'TCP 3-way handshake ensures both endpoints are ready.',healthyPattern:['Complete SYN, SYN-ACK, ACK sequence','No RST packets','Clean FIN closure'],warningPatterns:['SYN without SYN-ACK','Immediate RST','SYN retransmissions'],examplePackets:[{type:'syn',text:'[1] 192.168.1.100:54321 → 93.184.216.34:443 [SYN]'},{type:'synack',text:'[2] 93.184.216.34:443 → 192.168.1.100:54321 [SYN-ACK]'},{type:'ack',text:'[3] 192.168.1.100:54321 → 93.184.216.34:443 [ACK]'}]},{id:'https_browsing',title:'HTTPS Web Traffic',shortDesc:'Secure browsing with TLS',example:'Port 443 • TLS Handshake',fullDescription:'HTTPS uses TCP port 443 with TLS encryption.',healthyPattern:['TCP handshake on port 443','TLS handshake completes','Encrypted data flows','Bidirectional traffic'],warningPatterns:['Port 443 without TLS','Certificate errors','Unusual destination IPs']},{id:'dhcp_join',title:'DHCP (Device Joining)',shortDesc:'Device requesting IP from router',example:'DORA: Discover → Offer → Request → ACK',fullDescription:'DHCP DORA process assigns IP addresses.',healthyPattern:['All 4 DORA steps','Completion within 1-2s','Valid IP range','Single DHCP server'],warningPatterns:['Discover without Offer','Multiple DHCP servers','Constant renewals'],examplePackets:[{type:'discover',text:'[1] 0.0.0.0 → 255.255.255.255 [DHCP Discover]'},{type:'offer',text:'[2] 192.168.1.1 → 255.255.255.255 [DHCP Offer: 192.168.1.50]'},{type:'request',text:'[3] 0.0.0.0 → 255.255.255.255 [DHCP Request]'},{type:'ack',text:'[4] 192.168.1.1 → 192.168.1.50 [DHCP ACK]'}]},{id:'arp_resolution',title:'ARP (Local Network)',shortDesc:'Finding MAC for IP on LAN',example:'Who has 192.168.1.1? → MAC: aa:bb:cc:dd:ee:ff',fullDescription:'ARP resolves IP to MAC addresses on LAN.',healthyPattern:['Request followed by reply','1:1 ratio','Same MAC per IP','Minimal gratuitous ARP'],warningPatterns:['Multiple MACs for one IP','Excessive gratuitous ARP','ARP storms'],examplePackets:[{type:'request',text:'Who has 192.168.1.1? Tell 192.168.1.100'},{type:'reply',text:'192.168.1.1 is at aa:bb:cc:dd:ee:ff'}]},{id:'icmp_ping',title:'ICMP Ping',shortDesc:'Testing connectivity',example:'Echo Request → Echo Reply',fullDescription:'ICMP ping tests connectivity and latency.',healthyPattern:['Request followed by Reply','RTT under 100ms (LAN)','No packet loss','Consistent TTL'],warningPatterns:['No Reply (host down)','Destination Unreachable','Very high latency'],examplePackets:[{type:'request',text:'192.168.1.100 → 8.8.8.8 [Echo Request] TTL=64'},{type:'reply',text:'8.8.8.8 → 192.168.1.100 [Echo Reply] Time=15ms'}]},{id:'multicast_mdns',title:'Multicast/mDNS',shortDesc:'Device discovery on LAN',example:'Broadcast: _services._dns-sd._udp.local',fullDescription:'mDNS/SSDP for local service discovery.',healthyPattern:['Broadcast to 224.0.0.251','UDP port 5353 or 1900','Periodic (every few min)'],warningPatterns:['Excessive broadcasts (>100/s)','Multicast to external networks']},{id:'background_updates',title:'Background Updates',shortDesc:'Apps checking for updates',example:'HTTPS to known update servers',fullDescription:'OS and apps regularly check for updates.',healthyPattern:['Known domains (microsoft.com, etc.)','HTTPS port 443','Periodic (hourly/daily)'],warningPatterns:['Constant connections','Unknown domains','Excessive bandwidth']}];
     let detectedPatterns=new Set();
     function analyzeTrafficPatterns(){detectedPatterns.clear();if(!allPackets.length)return;const dp=allPackets.filter(p=>p.protocol==='DNS');if(dp.length>0&&dp.some(p=>p.info&&p.info.includes('Response')))detectedPatterns.add('dns_resolution');const tp=allPackets.filter(p=>p.protocol==='TCP');if(tp.some(p=>p.info&&p.info.includes('[SYN]'))&&tp.some(p=>p.info&&p.info.includes('[SYN-ACK]'))&&tp.some(p=>p.info&&p.info.includes('[ACK]')))detectedPatterns.add('tcp_handshake');if(allPackets.some(p=>p.protocol==='HTTPS'))detectedPatterns.add('https_browsing');if(allPackets.some(p=>p.protocol==='DHCP'))detectedPatterns.add('dhcp_join');if(allPackets.some(p=>p.protocol==='ARP'))detectedPatterns.add('arp_resolution');if(allPackets.some(p=>p.protocol==='ICMP'))detectedPatterns.add('icmp_ping');if(allPackets.some(p=>{const d=p.destination||'';return d.startsWith('224.')||d.startsWith('239.')||d==='ff02::fb';}))detectedPatterns.add('multicast_mdns');if(detectedPatterns.has('https_browsing'))detectedPatterns.add('background_updates');}
     function renderHealthyPatterns(){const c=document.getElementById('healthyPatternsList');if(!c)return;c.innerHTML=NORMAL_PATTERNS.map(p=>{const d=detectedPatterns.has(p.id);return`<div class="pattern-detail-card ${d?'detected':''}" id="pattern-${p.id}"><div class="pattern-detail-header"><div class="pattern-detail-title"><h3>${p.title}</h3><p>${p.shortDesc}</p></div>${d?'<div class="pattern-detected-tag">Found in Your Capture</div>':''}</div><div class="pattern-description">${p.fullDescription}</div><div class="pattern-subsection"><div class="pattern-subsection-title">Healthy Pattern:</div><ul class="pattern-list">${p.healthyPattern.map(i=>'<li>'+i+'</li>').join('')}</ul></div>${p.warningPatterns?`<div class="pattern-subsection"><div class="pattern-subsection-title">Warning Signs:</div><ul class="pattern-list warning-list">${p.warningPatterns.map(i=>'<li>'+i+'</li>').join('')}</ul></div>`:''}${p.examplePackets?`<div class="pattern-subsection"><div class="pattern-subsection-title">Example Packets:</div><div class="pattern-packets-example">${p.examplePackets.map(pk=>`<div class="pattern-packet-line"><span class="pattern-packet-type ${pk.type}">${pk.type}</span><span class="pattern-packet-text">${pk.text}</span>${pk.time?'<span class="pattern-packet-meta">'+pk.time+'</span>':''}</div>`).join('')}</div></div>`:''}</div>`;}).join('');}
-    function renderMetrics(){const c=document.getElementById('metricsGrid');if(!c)return;const metrics=[{title:'DNS Response Time',ranges:[{label:'Excellent',icon:'good',value:'10-50ms'},{label:'Good',icon:'good',value:'50-200ms'},{label:'Slow',icon:'warning',value:'200-500ms'},{label:'Problem',icon:'bad',value:'>500ms'}]},{title:'TCP Retransmissions',ranges:[{label:'Excellent',icon:'good',value:'<0.1%'},{label:'Acceptable',icon:'good',value:'0.1-1%'},{label:'Concerning',icon:'warning',value:'1-3%'},{label:'Problem',icon:'bad',value:'>3%'}]},{title:'DHCP Renewals',ranges:[{label:'Normal',icon:'good',value:'Every 12-24h'},{label:'Frequent',icon:'warning',value:'Every 1-2h'},{label:'Suspicious',icon:'warning',value:'Every few min'},{label:'Problem',icon:'bad',value:'Constant'}]},{title:'ARP Request Rate',ranges:[{label:'Normal',icon:'good',value:'1-2 per IP'},{label:'Elevated',icon:'warning',value:'5-10'},{label:'High',icon:'warning',value:'10-50'},{label:'Problem',icon:'bad',value:'>50'}]},{title:'Ping Latency (LAN)',ranges:[{label:'Excellent',icon:'good',value:'<1ms'},{label:'Good',icon:'good',value:'1-10ms'},{label:'Acceptable',icon:'warning',value:'10-50ms'},{label:'Problem',icon:'bad',value:'>50ms'}]}];c.innerHTML=metrics.map(m=>`<div class="metric-card"><div class="metric-card-title">${m.title}</div>${m.ranges.map(r=>`<div class="metric-range"><div class="metric-range-label"><span class="metric-range-icon ${r.icon}">${r.icon==='good'?'&#9679;':r.icon==='warning'?'&#9650;':'&#10005;'}</span><span>${r.label}:</span></div><div class="metric-range-value">${r.value}</div></div>`).join('')}</div>`).join('');}
+    function renderMetrics(){const c=document.getElementById('metricsGrid');if(!c)return;const metrics=[{title:'DNS Response Time',ranges:[{label:'Excellent',icon:'good',value:'10-50ms'},{label:'Good',icon:'good',value:'50-200ms'},{label:'Slow',icon:'warning',value:'200-500ms'},{label:'Problem',icon:'bad',value:'>500ms'}]},{title:'TCP Retransmissions',ranges:[{label:'Excellent',icon:'good',value:'<0.1%'},{label:'Acceptable',icon:'good',value:'0.1-1%'},{label:'Concerning',icon:'warning',value:'1-3%'},{label:'Problem',icon:'bad',value:'>3%'}]},{title:'DHCP Renewals',ranges:[{label:'Normal',icon:'good',value:'Every 12-24h'},{label:'Frequent',icon:'warning',value:'Every 1-2h'},{label:'Suspicious',icon:'warning',value:'Every few min'},{label:'Problem',icon:'bad',value:'Constant'}]},{title:'ARP Request Rate',ranges:[{label:'Normal',icon:'good',value:'1-2 per IP'},{label:'Elevated',icon:'warning',value:'5-10'},{label:'High',icon:'warning',value:'10-50'},{label:'Problem',icon:'bad',value:'>50'}]},{title:'Ping Latency (LAN)',ranges:[{label:'Excellent',icon:'good',value:'<1ms'},{label:'Good',icon:'good',value:'1-10ms'},{label:'Acceptable',icon:'warning',value:'10-50ms'},{label:'Problem',icon:'bad',value:'>50ms'}]}];c.innerHTML=metrics.map(m=>`<div class="metric-card"><div class="metric-card-title">${m.title}</div>${m.ranges.map(r=>`<div class="metric-range"><div class="metric-range-label"><span>${r.label}:</span></div><div class="metric-range-value">${r.value}</div></div>`).join('')}</div>`).join('');}
     function renderSuspiciousPatterns(){const c=document.getElementById('suspiciousPatternsList');if(!c)return;const patterns=[{title:'Broadcast Storm',observed:'Many packets to 255.255.255.255',reasons:['DHCP discovery','NetBIOS resolution','mDNS/Bonjour','SSDP discovery'],worryWhen:'>100 pkts/sec from single device'},{title:'Repeated Connection Attempts',observed:'Same source retrying same destination',reasons:['App retry logic','Background updaters','Health checks','Keep-alives'],worryWhen:'Different ports each time, unknown destinations, hundreds/sec'},{title:'Many External DNS Queries',observed:'Hundreds of DNS queries to different domains',reasons:['Many browser tabs','Email client loading','Social media prefetching'],worryWhen:'Suspicious TLDs, DGA-like random domains'}];c.innerHTML=patterns.map(p=>`<div class="suspicious-pattern-card"><div class="suspicious-pattern-title">${p.title}</div><div class="pattern-observed"><div class="pattern-observed-title">What You See:</div><div class="pattern-observed-desc">${p.observed}</div></div><div class="pattern-legitimate"><div class="pattern-legitimate-title">Legitimate Reasons:</div><ul class="pattern-list">${p.reasons.map(r=>'<li>'+r+'</li>').join('')}</ul></div><div class="pattern-worry-when"><div class="pattern-worry-title">When to Worry:</div><div class="pattern-observed-desc">${p.worryWhen}</div></div></div>`).join('');}
     function switchPatternsSection(s,btn){document.querySelectorAll('.patterns-nav-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.patterns-section').forEach(sec=>sec.classList.remove('active'));if(btn)btn.classList.add('active');const map={healthy:'healthyPatternsSection',metrics:'metricsSection',suspicious:'suspiciousSection'};document.getElementById(map[s]).classList.add('active');}
 
@@ -1897,37 +1908,37 @@
     // ============================================
     function renderReferenceGuide() {
         const terms = [
-            { icon: '&#128230;', title: 'PCAP (Packet Capture)', def: 'A file format used to store network packet data captured from a network interface.', ctx: 'Used by Wireshark, tcpdump, and WireTrace for offline analysis.', ex: 'A .pcap file containing 10,000 packets captured over 5 minutes.' },
-            { icon: '&#128232;', title: 'Packet', def: 'A formatted unit of data carried across a network, containing headers and payload.', ctx: 'Each row in the PCAP viewer represents one packet.', ex: 'An HTTP GET request is a single packet with TCP, IP, and Ethernet headers.' },
-            { icon: '&#128268;', title: 'Protocol', def: 'A set of rules defining how data is formatted and transmitted (e.g., TCP, UDP, DNS).', ctx: 'Packets are classified by protocol in the Protocol column.', ex: 'DNS protocol packets handle domain name resolution.' },
-            { icon: '&#128290;', title: 'MAC Address', def: 'A unique 48-bit hardware identifier assigned to a network interface controller.', ctx: 'Found in Ethernet frame headers; used for local network communication.', ex: '00:1A:2B:3C:4D:5E — uniquely identifies a device on the LAN.' },
-            { icon: '&#128260;', title: 'ARP (Address Resolution Protocol)', def: 'Protocol mapping IP addresses to MAC addresses on a local network.', ctx: 'ARP packets reveal which devices are communicating on the LAN.', ex: '"Who has 192.168.1.1? Tell 192.168.1.100" — device asking for the router\'s MAC.' },
-            { icon: '&#127760;', title: 'DNS (Domain Name System)', def: 'Protocol that resolves human-readable domain names to IP addresses.', ctx: 'DNS queries/responses show which websites or services devices are accessing.', ex: 'Query: "What is the IP of google.com?" → Response: "142.250.80.46"' },
-            { icon: '&#127968;', title: 'DHCP (Dynamic Host Config)', def: 'Protocol that automatically assigns IP addresses and network config to devices.', ctx: 'DHCP Discover/Offer/Request/ACK sequences show devices joining the network.', ex: 'DHCP Offer from 192.168.1.1 assigns IP 192.168.1.50 to a new device.' },
-            { icon: '&#128260;', title: 'TCP (Transmission Control)', def: 'Connection-oriented protocol providing reliable, ordered data delivery.', ctx: 'Most web traffic uses TCP. SYN/ACK/FIN flags show connection lifecycle.', ex: 'TCP SYN from port 52341 → port 443 initiates an HTTPS connection.' },
-            { icon: '&#9889;', title: 'UDP (User Datagram Protocol)', def: 'Connectionless protocol offering fast, lightweight data transmission without guaranteed delivery.', ctx: 'Used by DNS, DHCP, streaming, gaming, and VoIP.', ex: 'DNS queries typically use UDP port 53 for speed.' },
-            { icon: '&#128226;', title: 'ICMP (Internet Control Message)', def: 'Protocol for diagnostic and error messages between network devices.', ctx: 'Ping requests/replies and traceroute use ICMP. "Destination Unreachable" means a device or port cannot be reached.', ex: 'Echo Request (Type 8) from 192.168.1.5 to 8.8.8.8 — testing connectivity.' },
-            { icon: '&#128225;', title: 'PPPoE (Point-to-Point over Ethernet)', def: 'Protocol for encapsulating PPP frames inside Ethernet, commonly used by ISPs for broadband.', ctx: 'PADI/PADO/PADR/PADS sequences indicate broadband connection establishment.', ex: 'PADI (PPPoE Active Discovery Initiation) — router trying to connect to ISP.' },
-            { icon: '&#128256;', title: 'VLAN (Virtual LAN)', def: 'A logical subdivision of a LAN, tagged with an ID in the 802.1Q header.', ctx: 'WireTrace shows VLAN IDs in packet info (e.g., "VLAN 100"). Common in router captures.', ex: 'VLAN 100 for data traffic, VLAN 200 for voice traffic on the same physical link.' },
-            { icon: '&#128039;', title: 'Linux SLL (Cooked-mode Capture)', def: 'A special packet header format used when capturing on Linux "any" interface.', ctx: 'When tcpdump uses -i any, all packets get an SLL header. Source MAC is extracted from this header.', ex: 'You\'ll see "Linux SLL" as destination — this is normal, it\'s the capture format, not a real device.' },
-            { icon: '&#9201;', title: 'TTL (Time To Live)', def: 'Counter in IP headers decremented at each router hop; packet discarded when it reaches zero.', ctx: 'Helps identify routing loops and estimate distance to remote hosts.', ex: 'TTL=64 suggests Linux/Mac origin. TTL=128 suggests Windows.' },
-            { icon: '&#127760;', title: 'IPv6', def: 'Next-generation Internet Protocol using 128-bit addresses instead of IPv4\'s 32-bit.', ctx: 'WireTrace shows IPv6 addresses in full hex notation. Common in modern network traffic.', ex: '2001:db8:1:1::1 — a documentation-range IPv6 address.' },
-            { icon: '&#9888;', title: 'ARP Spoofing', def: 'An attack where a device sends forged ARP replies to associate its MAC with another device\'s IP.', ctx: 'WireTrace\'s Security tab detects this — a critical man-in-the-middle (MITM) attack indicator.', ex: 'Device 02:ab:cd:ef:12:34 falsely claims to be 192.168.1.1 (the gateway).' },
-            { icon: '&#128274;', title: 'HTTP vs HTTPS', def: 'HTTP (port 80) is unencrypted web traffic. HTTPS (port 443) is encrypted with TLS/SSL.', ctx: 'WireTrace classifies packets by port: 80=HTTP, 443=HTTPS. HTTPS payload cannot be decoded.', ex: 'TCP SYN to port 443 shows as HTTPS; to port 80 shows as HTTP.' },
+            { title: 'PCAP (Packet Capture)', def: 'A file format used to store network packet data captured from a network interface.', ctx: 'Used by Wireshark, tcpdump, and WireTrace for offline analysis.', ex: 'A .pcap file containing 10,000 packets captured over 5 minutes.' },
+            { title: 'Packet', def: 'A formatted unit of data carried across a network, containing headers and payload.', ctx: 'Each row in the PCAP viewer represents one packet.', ex: 'An HTTP GET request is a single packet with TCP, IP, and Ethernet headers.' },
+            { title: 'Protocol', def: 'A set of rules defining how data is formatted and transmitted (e.g., TCP, UDP, DNS).', ctx: 'Packets are classified by protocol in the Protocol column.', ex: 'DNS protocol packets handle domain name resolution.' },
+            { title: 'MAC Address', def: 'A unique 48-bit hardware identifier assigned to a network interface controller.', ctx: 'Found in Ethernet frame headers; used for local network communication.', ex: '00:1A:2B:3C:4D:5E — uniquely identifies a device on the LAN.' },
+            { title: 'ARP (Address Resolution Protocol)', def: 'Protocol mapping IP addresses to MAC addresses on a local network.', ctx: 'ARP packets reveal which devices are communicating on the LAN.', ex: '"Who has 192.168.1.1? Tell 192.168.1.100" — device asking for the router\'s MAC.' },
+            { title: 'DNS (Domain Name System)', def: 'Protocol that resolves human-readable domain names to IP addresses.', ctx: 'DNS queries/responses show which websites or services devices are accessing.', ex: 'Query: "What is the IP of google.com?" → Response: "142.250.80.46"' },
+            { title: 'DHCP (Dynamic Host Config)', def: 'Protocol that automatically assigns IP addresses and network config to devices.', ctx: 'DHCP Discover/Offer/Request/ACK sequences show devices joining the network.', ex: 'DHCP Offer from 192.168.1.1 assigns IP 192.168.1.50 to a new device.' },
+            { title: 'TCP (Transmission Control)', def: 'Connection-oriented protocol providing reliable, ordered data delivery.', ctx: 'Most web traffic uses TCP. SYN/ACK/FIN flags show connection lifecycle.', ex: 'TCP SYN from port 52341 → port 443 initiates an HTTPS connection.' },
+            { title: 'UDP (User Datagram Protocol)', def: 'Connectionless protocol offering fast, lightweight data transmission without guaranteed delivery.', ctx: 'Used by DNS, DHCP, streaming, gaming, and VoIP.', ex: 'DNS queries typically use UDP port 53 for speed.' },
+            { title: 'ICMP (Internet Control Message)', def: 'Protocol for diagnostic and error messages between network devices.', ctx: 'Ping requests/replies and traceroute use ICMP. "Destination Unreachable" means a device or port cannot be reached.', ex: 'Echo Request (Type 8) from 192.168.1.5 to 8.8.8.8 — testing connectivity.' },
+            { title: 'PPPoE (Point-to-Point over Ethernet)', def: 'Protocol for encapsulating PPP frames inside Ethernet, commonly used by ISPs for broadband.', ctx: 'PADI/PADO/PADR/PADS sequences indicate broadband connection establishment.', ex: 'PADI (PPPoE Active Discovery Initiation) — router trying to connect to ISP.' },
+            { title: 'VLAN (Virtual LAN)', def: 'A logical subdivision of a LAN, tagged with an ID in the 802.1Q header.', ctx: 'WireTrace shows VLAN IDs in packet info (e.g., "VLAN 100"). Common in router captures.', ex: 'VLAN 100 for data traffic, VLAN 200 for voice traffic on the same physical link.' },
+            { title: 'Linux SLL (Cooked-mode Capture)', def: 'A special packet header format used when capturing on Linux "any" interface.', ctx: 'When tcpdump uses -i any, all packets get an SLL header. Source MAC is extracted from this header.', ex: 'You\'ll see "Linux SLL" as destination — this is normal, it\'s the capture format, not a real device.' },
+            { title: 'TTL (Time To Live)', def: 'Counter in IP headers decremented at each router hop; packet discarded when it reaches zero.', ctx: 'Helps identify routing loops and estimate distance to remote hosts.', ex: 'TTL=64 suggests Linux/Mac origin. TTL=128 suggests Windows.' },
+            { title: 'IPv6', def: 'Next-generation Internet Protocol using 128-bit addresses instead of IPv4\'s 32-bit.', ctx: 'WireTrace shows IPv6 addresses in full hex notation. Common in modern network traffic.', ex: '2001:db8:1:1::1 — a documentation-range IPv6 address.' },
+            { title: 'ARP Spoofing', def: 'An attack where a device sends forged ARP replies to associate its MAC with another device\'s IP.', ctx: 'WireTrace\'s Security tab detects this — a critical man-in-the-middle (MITM) attack indicator.', ex: 'Device 02:ab:cd:ef:12:34 falsely claims to be 192.168.1.1 (the gateway).' },
+            { title: 'HTTP vs HTTPS', def: 'HTTP (port 80) is unencrypted web traffic. HTTPS (port 443) is encrypted with TLS/SSL.', ctx: 'WireTrace classifies packets by port: 80=HTTP, 443=HTTPS. HTTPS payload cannot be decoded.', ex: 'TCP SYN to port 443 shows as HTTPS; to port 80 shows as HTTP.' },
         ];
-        document.getElementById('jargonGrid').innerHTML = terms.map(t => `<div class="guide-card"><div class="card-header"><span class="card-header-icon">${t.icon}</span><span class="card-header-title">${t.title}</span></div><div class="flow-sequence"><div class="flow-item"><span class="flow-arrow">&#128196;</span><span class="flow-text">${t.def}</span></div><div class="flow-desc">Context: ${t.ctx}</div><div class="flow-desc">Example: ${t.ex}</div></div></div>`).join('');
-        
+        document.getElementById('jargonGrid').innerHTML = terms.map(t => `<div class="guide-card"><div class="card-header"><span class="card-header-title">${t.title}</span></div><div class="flow-sequence"><div class="flow-item"><span class="flow-text">${t.def}</span></div><div class="flow-desc">Context: ${t.ctx}</div><div class="flow-desc">Example: ${t.ex}</div></div></div>`).join('');
+
         const interp = [
-            { icon: '&#128260;', title: 'TCP Connection Lifecycle', items: [{a:'SYN',t:'Client initiates connection'},{a:'SYN-ACK',t:'Server acknowledges and accepts'},{a:'ACK',t:'Client confirms — connection established'},{a:'FIN',t:'Either side closes connection gracefully'},{a:'RST',t:'Connection reset (abrupt termination)'}], tip: 'Multiple RST packets to the same destination suggest a service is unavailable or a firewall is blocking. SYN without SYN-ACK means the server is not responding at all.' },
-            { icon: '&#127760;', title: 'DNS Resolution Flow', items: [{a:'Query',t:'Device asks "What is the IP for example.com?"'},{a:'Response (No error)',t:'Server returns the IP address'},{a:'Response (Name error)',t:'Domain doesn\'t exist (NXDOMAIN)'},{a:'Response (Server failure)',t:'DNS server couldn\'t process the request'}], tip: 'Frequent Server Failure responses indicate DNS server issues. Name errors for internal domains suggest misconfiguration. Many unanswered queries = DNS server is down or unreachable.' },
-            { icon: '&#127968;', title: 'DHCP Handshake (DORA)', items: [{a:'Discover',t:'Client broadcasts: "I need an IP address"'},{a:'Offer',t:'Server responds: "You can have 192.168.1.50"'},{a:'Request',t:'Client: "I\'ll take 192.168.1.50"'},{a:'ACK',t:'Server: "Confirmed, it\'s yours for 24h"'}], tip: 'Missing Offer after Discover suggests DHCP server is down. Multiple Discovers indicate the client can\'t get an address. Frequent Request/ACK cycles suggest short lease times or WiFi reconnections.' },
-            { icon: '&#128225;', title: 'PPPoE Session Setup', items: [{a:'PADI',t:'Router initiates ISP discovery (broadcast)'},{a:'PADO',t:'ISP responds with service offer'},{a:'PADR',t:'Router requests specific service'},{a:'PADS',t:'ISP confirms — session established'},{a:'PADT',t:'Either side terminates session'}], tip: 'PADI without PADO means ISP equipment is unreachable. Frequent PADT indicates unstable broadband. Repeated PADI→PADO→PADR→PADS cycles = reconnect loop.' },
-            { icon: '&#128226;', title: 'ICMP Interpretation', items: [{a:'Echo Request/Reply',t:'Ping — testing if a host is reachable'},{a:'Destination Unreachable',t:'Target IP or port cannot be reached'},{a:'Time Exceeded',t:'Packet TTL hit zero — possible routing loop'},{a:'Port Unreachable',t:'Specific service/port is not listening'}], tip: 'ICMP Destination Unreachable from the router (e.g., 192.168.1.1 → device) usually means the router tried to forward traffic but the upstream destination is down. From 8.8.8.8 → device means Google\'s DNS rejected the connection. This is common during ISP outages.' },
-            { icon: '&#128246;', title: 'WiFi Disconnection Patterns (Event Logs)', items: [{a:'DEAUTH Reason 1',t:'Unspecified reason — generic disconnect'},{a:'DEAUTH Reason 3',t:'Station leaving the network (normal)'},{a:'DEAUTH Reason 7',t:'Not authenticated — device needs to re-auth'},{a:'AP-STA-DISCONNECTED',t:'Access point reports client disconnected'},{a:'AP-STA-CONNECTED',t:'Client successfully (re)joined WiFi'}], tip: 'Repeated DEAUTH for one MAC = device-specific issue (driver, distance, interference). DEAUTH storms across many MACs = AP overloaded. Rapid CONNECTED/DISCONNECTED alternating between interfaces = band steering or roaming issues.' },
-            { icon: '&#127758;', title: 'WAN Event Patterns (Event Logs)', items: [{a:'PPPoE PADI sequences',t:'Router attempting to re-establish ISP connection'},{a:'Link Up/Down events',t:'Physical line issues (cable, exchange, weather)'},{a:'LCP down/terminated',t:'PPPoE authentication or keepalive failure'},{a:'eth0 Link DOWN',t:'Physical Ethernet connection lost'}], tip: 'Check timestamps of WAN events against reported outage times. Link DOWN followed by Link Up at lower speed (e.g., 100 Mbps instead of 1000) suggests cable degradation.' },
-            { icon: '&#128737;', title: 'Security Tab — What It Detects', items: [{a:'ARP Spoofing',t:'Device claiming to be the gateway with wrong MAC — MITM attack'},{a:'ARP Flooding',t:'Excessive ARP replies (>60/min) — network scanning or poisoning'},{a:'Rogue DHCP',t:'Unauthorized device offering IP addresses to clients'},{a:'ARP Scan',t:'Device claiming multiple different IPs — reconnaissance activity'}], tip: 'ARP Spoofing is the most critical finding — it means a device is intercepting traffic. ARP Flooding at moderate rates (5-30/min) is normal for busy LANs. Rogue DHCP from a non-gateway IP is a serious concern.' },
+            { title: 'TCP Connection Lifecycle', items: [{a:'SYN',t:'Client initiates connection'},{a:'SYN-ACK',t:'Server acknowledges and accepts'},{a:'ACK',t:'Client confirms — connection established'},{a:'FIN',t:'Either side closes connection gracefully'},{a:'RST',t:'Connection reset (abrupt termination)'}], tip: 'Multiple RST packets to the same destination suggest a service is unavailable or a firewall is blocking. SYN without SYN-ACK means the server is not responding at all.' },
+            { title: 'DNS Resolution Flow', items: [{a:'Query',t:'Device asks "What is the IP for example.com?"'},{a:'Response (No error)',t:'Server returns the IP address'},{a:'Response (Name error)',t:'Domain doesn\'t exist (NXDOMAIN)'},{a:'Response (Server failure)',t:'DNS server couldn\'t process the request'}], tip: 'Frequent Server Failure responses indicate DNS server issues. Name errors for internal domains suggest misconfiguration. Many unanswered queries = DNS server is down or unreachable.' },
+            { title: 'DHCP Handshake (DORA)', items: [{a:'Discover',t:'Client broadcasts: "I need an IP address"'},{a:'Offer',t:'Server responds: "You can have 192.168.1.50"'},{a:'Request',t:'Client: "I\'ll take 192.168.1.50"'},{a:'ACK',t:'Server: "Confirmed, it\'s yours for 24h"'}], tip: 'Missing Offer after Discover suggests DHCP server is down. Multiple Discovers indicate the client can\'t get an address. Frequent Request/ACK cycles suggest short lease times or WiFi reconnections.' },
+            { title: 'PPPoE Session Setup', items: [{a:'PADI',t:'Router initiates ISP discovery (broadcast)'},{a:'PADO',t:'ISP responds with service offer'},{a:'PADR',t:'Router requests specific service'},{a:'PADS',t:'ISP confirms — session established'},{a:'PADT',t:'Either side terminates session'}], tip: 'PADI without PADO means ISP equipment is unreachable. Frequent PADT indicates unstable broadband. Repeated PADI→PADO→PADR→PADS cycles = reconnect loop.' },
+            { title: 'ICMP Interpretation', items: [{a:'Echo Request/Reply',t:'Ping — testing if a host is reachable'},{a:'Destination Unreachable',t:'Target IP or port cannot be reached'},{a:'Time Exceeded',t:'Packet TTL hit zero — possible routing loop'},{a:'Port Unreachable',t:'Specific service/port is not listening'}], tip: 'ICMP Destination Unreachable from the router (e.g., 192.168.1.1 → device) usually means the router tried to forward traffic but the upstream destination is down. From 8.8.8.8 → device means Google\'s DNS rejected the connection. This is common during ISP outages.' },
+            { title: 'WiFi Disconnection Patterns (Event Logs)', items: [{a:'DEAUTH Reason 1',t:'Unspecified reason — generic disconnect'},{a:'DEAUTH Reason 3',t:'Station leaving the network (normal)'},{a:'DEAUTH Reason 7',t:'Not authenticated — device needs to re-auth'},{a:'AP-STA-DISCONNECTED',t:'Access point reports client disconnected'},{a:'AP-STA-CONNECTED',t:'Client successfully (re)joined WiFi'}], tip: 'Repeated DEAUTH for one MAC = device-specific issue (driver, distance, interference). DEAUTH storms across many MACs = AP overloaded. Rapid CONNECTED/DISCONNECTED alternating between interfaces = band steering or roaming issues.' },
+            { title: 'WAN Event Patterns (Event Logs)', items: [{a:'PPPoE PADI sequences',t:'Router attempting to re-establish ISP connection'},{a:'Link Up/Down events',t:'Physical line issues (cable, exchange, weather)'},{a:'LCP down/terminated',t:'PPPoE authentication or keepalive failure'},{a:'eth0 Link DOWN',t:'Physical Ethernet connection lost'}], tip: 'Check timestamps of WAN events against reported outage times. Link DOWN followed by Link Up at lower speed (e.g., 100 Mbps instead of 1000) suggests cable degradation.' },
+            { title: 'Security Tab — What It Detects', items: [{a:'ARP Spoofing',t:'Device claiming to be the gateway with wrong MAC — MITM attack'},{a:'ARP Flooding',t:'Excessive ARP replies (>60/min) — network scanning or poisoning'},{a:'Rogue DHCP',t:'Unauthorized device offering IP addresses to clients'},{a:'ARP Scan',t:'Device claiming multiple different IPs — reconnaissance activity'}], tip: 'ARP Spoofing is the most critical finding — it means a device is intercepting traffic. ARP Flooding at moderate rates (5-30/min) is normal for busy LANs. Rogue DHCP from a non-gateway IP is a serious concern.' },
         ];
-        document.getElementById('dataInterpretation').innerHTML = '<h3 class="subsection-title">Reading PCAP Data</h3>' + interp.slice(0,5).map(i => `<div class="guide-card"><div class="card-header"><span class="card-header-icon">${i.icon}</span><span class="card-header-title">${i.title}</span></div><div class="flow-sequence">${i.items.map(it => `<div class="flow-item"><span class="flow-arrow">${it.a}</span><span class="flow-text">→ ${it.t}</span></div>`).join('')}</div><div class="tip-box"><span class="tip-icon">&#128269;</span><span class="tip-text"><strong>What to look for:</strong> ${i.tip}</span></div></div>`).join('') + '<h3 class="subsection-title" style="margin-top:40px;">Reading Event Logs</h3>' + interp.slice(5,7).map(i => `<div class="guide-card"><div class="card-header"><span class="card-header-icon">${i.icon}</span><span class="card-header-title">${i.title}</span></div><div class="flow-sequence">${i.items.map(it => `<div class="flow-item"><span class="flow-arrow">${it.a}</span><span class="flow-text">→ ${it.t}</span></div>`).join('')}</div><div class="tip-box"><span class="tip-icon">&#128269;</span><span class="tip-text"><strong>What to look for:</strong> ${i.tip}</span></div></div>`).join('') + '<h3 class="subsection-title" style="margin-top:40px;">Understanding WireTrace Features</h3>' + interp.slice(7).map(i => `<div class="guide-card"><div class="card-header"><span class="card-header-icon">${i.icon}</span><span class="card-header-title">${i.title}</span></div><div class="flow-sequence">${i.items.map(it => `<div class="flow-item"><span class="flow-arrow">${it.a}</span><span class="flow-text">→ ${it.t}</span></div>`).join('')}</div><div class="tip-box"><span class="tip-icon">&#128269;</span><span class="tip-text"><strong>What to look for:</strong> ${i.tip}</span></div></div>`).join('');
+        document.getElementById('dataInterpretation').innerHTML = '<h3 class="subsection-title">Reading PCAP Data</h3>' + interp.slice(0,5).map(i => `<div class="guide-card"><div class="card-header"><span class="card-header-title">${i.title}</span></div><div class="flow-sequence">${i.items.map(it => `<div class="flow-item"><span class="flow-arrow">${it.a}</span><span class="flow-text">→ ${it.t}</span></div>`).join('')}</div><div class="tip-box"><span class="tip-text"><strong>What to look for:</strong> ${i.tip}</span></div></div>`).join('') + '<h3 class="subsection-title" style="margin-top:40px;">Reading Event Logs</h3>' + interp.slice(5,7).map(i => `<div class="guide-card"><div class="card-header"><span class="card-header-title">${i.title}</span></div><div class="flow-sequence">${i.items.map(it => `<div class="flow-item"><span class="flow-arrow">${it.a}</span><span class="flow-text">→ ${it.t}</span></div>`).join('')}</div><div class="tip-box"><span class="tip-text"><strong>What to look for:</strong> ${i.tip}</span></div></div>`).join('') + '<h3 class="subsection-title" style="margin-top:40px;">Understanding WireTrace Features</h3>' + interp.slice(7).map(i => `<div class="guide-card"><div class="card-header"><span class="card-header-title">${i.title}</span></div><div class="flow-sequence">${i.items.map(it => `<div class="flow-item"><span class="flow-arrow">${it.a}</span><span class="flow-text">→ ${it.t}</span></div>`).join('')}</div><div class="tip-box"><span class="tip-text"><strong>What to look for:</strong> ${i.tip}</span></div></div>`).join('');
     }
 
     // ============================================
